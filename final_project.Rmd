@@ -20,13 +20,14 @@ library(ROSE)
 library(rpart)
 library(tree)
 library(randomForest)
+library(caret)
 ```
 
 ## R Markdown
 
 Predicting survivability of Hepatitis Patient
 
-Importing the dataset
+# Importing the dataset
 ```{r}
 stroke_data = read.csv("/Users/saishdesai/Documents/UIUC_MSIM/Spring 2022/Methods of DS IS 517/Final_Project/Data/healthcare-dataset-stroke-data.csv")
 head(stroke_data)
@@ -34,12 +35,12 @@ head(stroke_data)
 
 ## Including Plots
 
-Describing the data
+# Describing the data
 ```{r}
 str(stroke_data)
 ```
 
-Factorizing all the categorical variables
+# Factorizing all the categorical variables
 ```{r}
 # reference for one hot coding - https://datatricks.co.uk/one-hot-encoding-in-r-three-simple-methods
 
@@ -62,7 +63,7 @@ stroke_data_clean = subset(stroke_data, select = -c(gender,ever_married,work_typ
 str(stroke_data_clean)
 ```
 
-Missing values in the dataset
+# Missing values in the dataset
 ```{r}
 # printing columns with missing values
 missing <- names(which(colSums(is.na(stroke_data_clean))>0))
@@ -112,32 +113,106 @@ d <- density(na.omit(stroke_data_clean$avg_glucose_level))
 plot(d, main="Distribution for Avg_glucose_level")
 polygon(d, col="yellow", border="blue")
 
-boxplot(stroke_data_clean$age, main="Age distribution",
-   xlab="ID", ylab="Age")
-
-# boxplot(stroke_data_clean$bmi)
-# ggbetweenstats(stroke_data_clean,id, bmi, outlier.tagging = TRUE)
-# 
-# boxplot(stroke_data_clean$avg_glucose_level)
-# ggbetweenstats(stroke_data_clean,id, avg_glucose_level, outlier.tagging = TRUE)
-
-
-
 ```
 
 Imputation of missing values with mean of the values from the column 'bmi'
 ```{r}
 stroke_data_clean$bmi[is.na(stroke_data_clean$bmi)] <- mean(stroke_data_clean$bmi, na.rm = TRUE)
 stroke_data_clean <- na.omit(stroke_data_clean)
+str(stroke_data_clean)
+```
+# Outlier removal
+```{r}
+#boxplot before outlier removal
+boxplot(eliminated$age, main="Age distribution",
+   xlab="ID", ylab="Age")
+
+boxplot(eliminated$bmi, main="Bmi distribution",
+   xlab="ID", ylab="bmi")
+
+boxplot(eliminated$avg_glucose_level, main="Avg glucose level distribution",
+   xlab="ID", ylab="avg_glucose_level")
+
+```
+
+
+```{r}
+#IQR
+
+Q_age <- quantile(stroke_data_clean$age, probs=c(.25, .75), na.rm = FALSE)
+iqr_age <- IQR(stroke_data_clean$age)
+
+Q_bmi<- quantile(stroke_data_clean$bmi, probs=c(.25, .75), na.rm = FALSE)
+iqr_bmi <- IQR(stroke_data_clean$bmi)
+ 
+Q_avg_glucose_level<- quantile(stroke_data_clean$avg_glucose_level, probs=c(.25, .75), na.rm = FALSE)
+iqr_avg_glucose_level <- IQR(stroke_data_clean$avg_glucose_level)
+
+
+eliminated<- subset(stroke_data_clean, 
+                    stroke_data_clean$age > (Q_age[1] - 1.5*iqr_age) & 
+                    stroke_data_clean$age < (Q_age[2]+1.5*iqr_age) & 
+                    stroke_data_clean$bmi > (Q_bmi[1] - 1.5*iqr_bmi) & 
+                    stroke_data_clean$bmi < (Q_bmi[2]+1.5*iqr_bmi) & 
+                    stroke_data_clean$avg_glucose_level > (Q_avg_glucose_level[1] - 1.5*iqr_avg_glucose_level) &
+                    stroke_data_clean$avg_glucose_level < (Q_avg_glucose_level[2]+1.5*iqr_avg_glucose_level))
+
+
+
+
 ```
 
 ```{r}
-str(stroke_data_clean)
+#boxplot after outlier removal
+boxplot(eliminated$age, main="Age distribution",
+   xlab="ID", ylab="Age")
+
+boxplot(eliminated$bmi, main="Bmi distribution",
+   xlab="ID", ylab="bmi")
+
+boxplot(eliminated$avg_glucose_level, main="Avg glucose level distribution",
+   xlab="ID", ylab="avg_glucose_level")
+
+table(eliminated$stroke)
+
+# min max standardization function
+fun_range <- function(x) {                             
+  (x - min(x)) / (max(x) - min(x))
+}
+# perform normalization
+eliminated$age <- fun_range(x = eliminated$age)
+eliminated$bmi <- fun_range(x = eliminated$bmi)
+eliminated$avg_glucose_level <- fun_range(x = eliminated$avg_glucose_level)
+
+
 ```
+```{r}
+eliminated$stroke<-as.factor(eliminated$stroke)
+
+# train test split
+split1<- sample(c(rep(0, 0.7 * nrow(eliminated)), rep(1, 0.3 * nrow(eliminated))))
+
+train <- eliminated[split1 == 0, ]
+test <- eliminated[split1== 1, ]
+
+rf <- randomForest(stroke ~., data = train, mtry =sqrt(ncol(train) - 1), ntree = 500)
+
+
+# predicting the income value
+yhat_rf <- predict(rf, test[,-7])
+
+# accuracy
+acc_rf = mean(yhat_rf == test$stroke)
+
+# classification metrics
+cm <- confusionMatrix(yhat_rf, test$stroke, mode = "everything", positive="1")
+cm
+```
+Due to a high class imbalance all the entries are classified as belonging to class 0. This will lead to Pecision and Recall value of "0", thus making the F1-score undefined.
 
 ```{r}
 # data <- ROSE(stroke~., stroke_data_clean, p=0.5, hmult.majo=1, hmult.mino=1)$data
-data_balanced_over <- ovun.sample(stroke~ ., data = stroke_data_clean, p=0.5, method = "over")$data
+data_balanced_over <- ovun.sample(stroke~ ., data = train, p=0.6, method = "over")$data
 table(data_balanced_over$stroke)
 ```
 
@@ -148,7 +223,7 @@ But, before that we need to remove the outliers from the dataset.
 
 
 ```{r}
-data_balanced <- rbind(stroke_data_clean, data_balanced_over)
+data_balanced <- rbind(train, data_balanced_over)
 data_balanced
 table(data_balanced$stroke)
 ```
@@ -173,30 +248,26 @@ polygon(d, col="yellow", border="blue")
 ```
 
 ```{r}
-# splitting the data into train and test set
-split1<- sample(c(rep(0, 0.7 * nrow(data_balanced)), rep(1, 0.3 * nrow(data_balanced))))
-table(split1)
 
-# train set
-train <- data_balanced[split1 == 0, ]
+wn = sum(data_balanced$stroke =="0")/length(data_balanced$stroke)
+wy = 1
 
-# test set
-test <- data_balanced[split1== 1, ]
+rf <- randomForest(stroke ~., data = data_balanced, mtry =sqrt(ncol(data_balanced) - 1), classwt = c("0"=wn, "1"=wy), ntree = 500)
+
+
+# predicting the income value
+yhat_rf <- predict(rf, test[,-7])
+
+# accuracy
+acc_rf = mean(yhat_rf == test$stroke)
+
+# classification metrics
+cm <- confusionMatrix(yhat_rf, test$stroke, mode = "everything", positive="1")
+cm
 ```
 
-Applying Logistic Regression to the data
-```{r}
-mylogit <- glm(stroke ~., data = train, family = "binomial")
-summary(mylogit)
-prediction <- predict(mylogit,test, type = "response")
-prediction <- as.integer(prediction > 0.3)
-```
 
-```{r}
-accuracy.meas(test$stroke, prediction)
-table(test$stroke, prediction)
-```
 Applying random forest to the data
 ```{r}
-# stroke_rf <- randomForest(stroke ~., data = train, importance = TRUE)
+table(test$stroke)
 ```
