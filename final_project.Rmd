@@ -1,0 +1,202 @@
+---
+title: "Methods of Data Science : Final Year Project"
+author: "Saish Desai"
+date: "3/18/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# installation of all the packages
+install.packages("ggstatsplot")
+
+# loading all the packages
+library("ggstatsplot")
+library(dplyr)
+library(mltools)
+library(data.table)
+library(ROSE)
+library(rpart)
+library(tree)
+library(randomForest)
+```
+
+## R Markdown
+
+Predicting survivability of Hepatitis Patient
+
+Importing the dataset
+```{r}
+stroke_data = read.csv("/Users/saishdesai/Documents/UIUC_MSIM/Spring 2022/Methods of DS IS 517/Final_Project/Data/healthcare-dataset-stroke-data.csv")
+head(stroke_data)
+```
+
+## Including Plots
+
+Describing the data
+```{r}
+str(stroke_data)
+```
+
+Factorizing all the categorical variables
+```{r}
+# reference for one hot coding - https://datatricks.co.uk/one-hot-encoding-in-r-three-simple-methods
+
+stroke_data$gender_cat = factor(stroke_data$gender,levels = c('Male', 'Female'),labels = c(0,1))
+stroke_data$ever_married_cat = factor(stroke_data$ever_married,levels = c('No', 'Yes'),labels = c(0,1))
+stroke_data$Residence_type_cat = factor(stroke_data$Residence_type,levels = c('Rural', 'Urban'),labels = c(0,1))
+
+stroke_data$hypertension = factor(stroke_data$hypertension,levels = c('0', '1'),labels = c(0,1))
+
+stroke_data$heart_disease = factor(stroke_data$heart_disease,levels = c('0', '1'),labels = c(0,1))
+
+stroke_data$smoking_status_cat = factor(stroke_data$smoking_status,levels = c("formerly smoked", "never smoked", "smokes","Unknown"),labels = c(0,1,2,3))
+stroke_data$work_type_cat = factor(stroke_data$work_type,levels = c("children", "Govt_job", "Never_worked", "Private","Self-employed"),labels = c(0,1,2,3,4))
+
+stroke_data['bmi'] <- as.numeric(stroke_data$bmi)
+```
+
+```{r}
+stroke_data_clean = subset(stroke_data, select = -c(gender,ever_married,work_type,Residence_type,smoking_status,work_type) )
+str(stroke_data_clean)
+```
+
+Missing values in the dataset
+```{r}
+# printing columns with missing values
+missing <- names(which(colSums(is.na(stroke_data_clean))>0))
+
+print(missing)
+
+for(ele in missing){
+  null_count <- sum(is.na(stroke_data_clean[ele]))
+  null_percent <- null_count*100/nrow(stroke_data_clean)
+  print(ele)
+  print(null_count)
+  print(null_percent)
+  
+}
+```
+
+```{r}
+mean_bmi <- mean(na.omit(stroke_data_clean$bmi))
+median_bmi <- median(na.omit(stroke_data_clean$bmi))
+
+# estimating the mode value of the bmi column
+# reference - https://www.tutorialspoint.com/r/r_mean_median_mode.htm
+getmode <- function(v) {
+   uniqv <- unique(v)
+   index <-which.max(tabulate(match(v, uniqv))) #index of the most occuring value
+   uniqv[index]
+}
+mode_bmi <- getmode(na.omit(stroke_data_clean$bmi))
+
+
+print(mean_bmi)
+print(median_bmi)
+print(mode_bmi)
+
+# distribution for BMI
+d <- density(na.omit(stroke_data_clean$bmi))
+plot(d, main="Distribution for BMI ")
+polygon(d, col="green", border="blue")
+
+# distribution for age
+d <- density(na.omit(stroke_data_clean$age))
+plot(d, main="Distribution for Age ")
+polygon(d, col="red", border="blue")
+
+# distribution for avg_glucose_level
+d <- density(na.omit(stroke_data_clean$avg_glucose_level))
+plot(d, main="Distribution for Avg_glucose_level")
+polygon(d, col="yellow", border="blue")
+
+boxplot(stroke_data_clean$age, main="Age distribution",
+   xlab="ID", ylab="Age")
+
+# boxplot(stroke_data_clean$bmi)
+# ggbetweenstats(stroke_data_clean,id, bmi, outlier.tagging = TRUE)
+# 
+# boxplot(stroke_data_clean$avg_glucose_level)
+# ggbetweenstats(stroke_data_clean,id, avg_glucose_level, outlier.tagging = TRUE)
+
+
+
+```
+
+Imputation of missing values with mean of the values from the column 'bmi'
+```{r}
+stroke_data_clean$bmi[is.na(stroke_data_clean$bmi)] <- mean(stroke_data_clean$bmi, na.rm = TRUE)
+stroke_data_clean <- na.omit(stroke_data_clean)
+```
+
+```{r}
+str(stroke_data_clean)
+```
+
+```{r}
+# data <- ROSE(stroke~., stroke_data_clean, p=0.5, hmult.majo=1, hmult.mino=1)$data
+data_balanced_over <- ovun.sample(stroke~ ., data = stroke_data_clean, p=0.5, method = "over")$data
+table(data_balanced_over$stroke)
+```
+
+The data is highly impbalanced due to the fact the there are very few people having suffered from stroke. So to reduce the class imbalance we use over smapling techniques to replicate some data with affecting the probabilty distribution of predictors in the data set. 
+
+But, before that we need to remove the outliers from the dataset.
+
+
+
+```{r}
+data_balanced <- rbind(stroke_data_clean, data_balanced_over)
+data_balanced
+table(data_balanced$stroke)
+```
+
+```{r}
+# distribution of balanced data
+
+# distribution for BMI
+d <- density(na.omit(data_balanced$bmi))
+plot(d, main="Distribution for BMI ")
+polygon(d, col="green", border="blue")
+
+# distribution for age
+d <- density(na.omit(data_balanced$age))
+plot(d, main="Distribution for Age ")
+polygon(d, col="red", border="blue")
+
+# distribution for avg_glucose_level
+d <- density(na.omit(data_balanced$avg_glucose_level))
+plot(d, main="Distribution for Avg_glucose_level")
+polygon(d, col="yellow", border="blue")
+```
+
+```{r}
+# splitting the data into train and test set
+split1<- sample(c(rep(0, 0.7 * nrow(data_balanced)), rep(1, 0.3 * nrow(data_balanced))))
+table(split1)
+
+# train set
+train <- data_balanced[split1 == 0, ]
+
+# test set
+test <- data_balanced[split1== 1, ]
+```
+
+Applying Logistic Regression to the data
+```{r}
+mylogit <- glm(stroke ~., data = train, family = "binomial")
+summary(mylogit)
+prediction <- predict(mylogit,test, type = "response")
+prediction <- as.integer(prediction > 0.3)
+```
+
+```{r}
+accuracy.meas(test$stroke, prediction)
+table(test$stroke, prediction)
+```
+Applying random forest to the data
+```{r}
+# stroke_rf <- randomForest(stroke ~., data = train, importance = TRUE)
+```
