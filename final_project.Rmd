@@ -1,15 +1,17 @@
 ---
-title: "Methods of Data Science : Final Year Project"
-author: "Saish Desai"
-date: "3/18/2022"
-output: html_document
+title: |
+    | Methods of Data Science: Final Project 
+    | Stroke Prediction based on health and lifestyle factors
+    
+author: 'Saish Desai, Anish Shetty, Vishnupriya Singh'
+output: pdf_document 
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 # installation of all the packages
-install.packages("ggstatsplot")
+# install.packages("ggstatsplot")
 
 # loading all the packages
 library("ggstatsplot")
@@ -22,76 +24,257 @@ library(tree)
 library(randomForest)
 library(caret)
 ```
+# Introduction
 
-## R Markdown
+# Research Questions
 
-Predicting survivability of Hepatitis Patient
+# Data Cleaning & Analysis
 
-# Importing the dataset
+### Dataset Source : https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
 ```{r}
-stroke_data = read.csv("/Users/saishdesai/Documents/UIUC_MSIM/Spring 2022/Methods of DS IS 517/Final_Project/Data/healthcare-dataset-stroke-data.csv")
+stroke_data = read.csv("healthcare-dataset-stroke-data.csv")
 head(stroke_data)
 ```
+### Dataset Description and EDA
 
-## Including Plots
-
-# Describing the data
 ```{r}
 str(stroke_data)
 ```
+## Understanding the distribution of variables.
 
-# Factorizing all the categorical variables
+# Categorical Variables
+
+## 1. Gender
+
+```{r}
+gender_counts <- as.data.frame(table(stroke_data$gender))
+
+ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq), vjust = 0) +
+        labs(x ="Gender", y = "Frequency")
+```
+
+## 2. Hypertension
+```{r}
+ht_counts <- as.data.frame(table(stroke_data$hypertension))
+ht_counts$Var1 <- if_else(ht_counts$Var1 == 0, 'No','Yes')
+
+ggplot(ht_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq), vjust = 0) +
+        labs(x ="Hypertension", y = "Frequency")
+
+
+hypstr_counts <- as.data.frame(table(stroke_data$hypertension, stroke_data$stroke))
+hypstr_counts$Var1 <- if_else(hypstr_counts$Var1 == 0, 'No','Yes')
+hypstr_counts$Var2 <- if_else(hypstr_counts$Var2 == 0, 'No','Yes')
+
+ggplot(hypstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq), vjust = 0) +
+        labs(x ="Hypertension", y = "Frequency", fill = 'Stroke')
+```
+
+
+## 3. Heart Disease
+
+```{r}
+hd_counts <- as.data.frame(table(stroke_data$heart_disease))
+hd_counts$Var1 <- if_else(hd_counts$Var1 == 0, 'No','Yes')
+
+ggplot(hd_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Heart Disease", y = "Frequency")
+
+
+hdstr_counts <- as.data.frame(table(stroke_data$heart_disease, stroke_data$stroke))
+hdstr_counts$Var1 <- if_else(hdstr_counts$Var1 == 0, 'No','Yes')
+hdstr_counts$Var2 <- if_else(hdstr_counts$Var2 == 0, 'No','Yes')
+
+ggplot(hdstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Heart Disease", y = "Frequency", fill = 'Stroke')
+```
+
+## 4. Ever Married
+
+```{r}
+
+m_counts <- as.data.frame(table(stroke_data$ever_married))
+
+ggplot(m_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Married?", y = "Frequency")
+
+
+mstr_counts <- as.data.frame(table(stroke_data$ever_married, stroke_data$stroke))
+mstr_counts$Var2 <- if_else(mstr_counts$Var2 == 0, 'No','Yes')
+
+ggplot(mstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Marriage", y = "Frequency", fill = 'Stroke')
+
+```
+
+## 5. Work Type
+
+
+```{r}
+
+wt_counts <- as.data.frame(table(stroke_data$work_type))
+
+ggplot(wt_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Work Type", y = "Frequency")
+
+
+wtstr_counts <- as.data.frame(table(stroke_data$work_type, stroke_data$stroke))
+wtstr_counts$Var2 <- if_else(wtstr_counts$Var2 == 0, 'No','Yes')
+
+ggplot(wtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Marriage", y = "Frequency", fill = 'Stroke')
+
+```
+
+## 6. Residence Type
+
+```{r}
+
+rt_counts <- as.data.frame(table(stroke_data$Residence_type))
+
+ggplot(rt_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Residence Type", y = "Frequency")
+
+
+rtstr_counts <- as.data.frame(table(stroke_data$Residence_type, stroke_data$stroke))
+rtstr_counts$Var2 <- if_else(rtstr_counts$Var2 == 0, 'No','Yes')
+
+ggplot(rtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Residence Type", y = "Frequency", fill = 'Stroke')
+
+```
+
+## 7. Smoking Status
+```{r}
+
+ss_counts <- as.data.frame(table(stroke_data$smoking_status))
+
+ggplot(ss_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Residence Type", y = "Frequency")
+
+
+ssstr_counts <- as.data.frame(table(stroke_data$smoking_status, stroke_data$stroke))
+ssstr_counts$Var2 <- if_else(ssstr_counts$Var2 == 0, 'No','Yes')
+
+ggplot(ssstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Smoking Status", y = "Frequency", fill = 'Stroke')
+
+```
+
+# Continous Variables
+
+## 8. Age
+
+```{r}
+#reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
+
+
+ggplot(stroke_data, aes(x=age)) + 
+  geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
+  geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
+```
+## 9. Avg Glucose Level
+
+```{r}
+
+ggplot(stroke_data, aes(x=avg_glucose_level)) + 
+  geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
+  geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
+```
+
+
+
+## 10. BMI
+
+```{r}
+#reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
+stroke_data$bmi <- as.integer(stroke_data$bmi)
+
+ggplot(stroke_data, aes(x=bmi)) + 
+  geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
+  geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
+```
+
+## 11. Stroke
+
+```{r}
+s_counts <- as.data.frame(table(stroke_data$stroke))
+
+ggplot(s_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+        geom_bar(stat = "identity") + theme(legend.position="none") +
+        geom_text(aes(label = Freq)) +
+        labs(x ="Residence Type", y = "Frequency")
+```
+As we can see from the above graph, Our dependant variable stroke is highly imbalanced, Which is true in a realistic scenario as for a sample population, Number of people suffering from stroke is less.
+
+Factorizing all the categorical variables
+
 ```{r}
 # reference for one hot coding - https://datatricks.co.uk/one-hot-encoding-in-r-three-simple-methods
 
-stroke_data$gender_cat = factor(stroke_data$gender,levels = c('Male', 'Female'),labels = c(0,1))
-stroke_data$ever_married_cat = factor(stroke_data$ever_married,levels = c('No', 'Yes'),labels = c(0,1))
-stroke_data$Residence_type_cat = factor(stroke_data$Residence_type,levels = c('Rural', 'Urban'),labels = c(0,1))
+stroke_data$gender = factor(stroke_data$gender,levels = c('Male', 'Female'),labels = c(0,1))
+stroke_data$ever_married = factor(stroke_data$ever_married,levels = c('No', 'Yes'),labels = c(0,1))
+stroke_data$Residence_type = factor(stroke_data$Residence_type,levels = c('Rural', 'Urban'),labels = c(0,1))
 
 stroke_data$hypertension = factor(stroke_data$hypertension,levels = c('0', '1'),labels = c(0,1))
 
 stroke_data$heart_disease = factor(stroke_data$heart_disease,levels = c('0', '1'),labels = c(0,1))
 
-stroke_data$smoking_status_cat = factor(stroke_data$smoking_status,levels = c("formerly smoked", "never smoked", "smokes","Unknown"),labels = c(0,1,2,3))
-stroke_data$work_type_cat = factor(stroke_data$work_type,levels = c("children", "Govt_job", "Never_worked", "Private","Self-employed"),labels = c(0,1,2,3,4))
+stroke_data$smoking_status = factor(stroke_data$smoking_status,levels = c("formerly smoked", "never smoked", "smokes","Unknown"),labels = c(0,1,2,3))
+stroke_data$work_type = factor(stroke_data$work_type,levels = c("children", "Govt_job", "Never_worked", "Private","Self-employed"),labels = c(0,1,2,3,4))
 
 stroke_data['bmi'] <- as.numeric(stroke_data$bmi)
+stroke_data$stroke<-as.factor(stroke_data$stroke)
 ```
 
+
+### Check for NA's in the Dataset
 ```{r}
-stroke_data_clean = subset(stroke_data, select = -c(gender,ever_married,work_type,Residence_type,smoking_status,work_type) )
-str(stroke_data_clean)
+#Columnwise percentage of rows which are NA
+colMeans(is.na(stroke_data))*100
 ```
 
-# Missing values in the dataset
-```{r}
-# printing columns with missing values
-missing <- names(which(colSums(is.na(stroke_data_clean))>0))
-
-print(missing)
-
-for(ele in missing){
-  null_count <- sum(is.na(stroke_data_clean[ele]))
-  null_percent <- null_count*100/nrow(stroke_data_clean)
-  print(ele)
-  print(null_count)
-  print(null_percent)
-  
-}
-```
 
 ```{r}
-mean_bmi <- mean(na.omit(stroke_data_clean$bmi))
-median_bmi <- median(na.omit(stroke_data_clean$bmi))
+mean_bmi <- mean(na.omit(stroke_data$bmi))
+median_bmi <- median(na.omit(stroke_data$bmi))
 
 # estimating the mode value of the bmi column
 # reference - https://www.tutorialspoint.com/r/r_mean_median_mode.htm
+
 getmode <- function(v) {
    uniqv <- unique(v)
    index <-which.max(tabulate(match(v, uniqv))) #index of the most occuring value
    uniqv[index]
 }
-mode_bmi <- getmode(na.omit(stroke_data_clean$bmi))
+
+mode_bmi <- getmode(na.omit(stroke_data$bmi))
 
 
 print(mean_bmi)
@@ -99,17 +282,17 @@ print(median_bmi)
 print(mode_bmi)
 
 # distribution for BMI
-d <- density(na.omit(stroke_data_clean$bmi))
+d <- density(na.omit(stroke_data$bmi))
 plot(d, main="Distribution for BMI ")
 polygon(d, col="green", border="blue")
 
 # distribution for age
-d <- density(na.omit(stroke_data_clean$age))
+d <- density(na.omit(stroke_data$age))
 plot(d, main="Distribution for Age ")
 polygon(d, col="red", border="blue")
 
 # distribution for avg_glucose_level
-d <- density(na.omit(stroke_data_clean$avg_glucose_level))
+d <- density(na.omit(stroke_data$avg_glucose_level))
 plot(d, main="Distribution for Avg_glucose_level")
 polygon(d, col="yellow", border="blue")
 
@@ -117,113 +300,123 @@ polygon(d, col="yellow", border="blue")
 
 Imputation of missing values with mean of the values from the column 'bmi'
 ```{r}
-stroke_data_clean$bmi[is.na(stroke_data_clean$bmi)] <- mean(stroke_data_clean$bmi, na.rm = TRUE)
-stroke_data_clean <- na.omit(stroke_data_clean)
-str(stroke_data_clean)
+stroke_data$bmi[is.na(stroke_data$bmi)] <- mean(stroke_data$bmi, na.rm = TRUE)
+stroke_data <- na.omit(stroke_data)
+str(stroke_data)
 ```
-# Outlier removal
+### Checking for outliers
+
 ```{r}
 #boxplot before outlier removal
-boxplot(eliminated$age, main="Age distribution",
+boxplot(stroke_data$age, main="Age distribution",
    xlab="ID", ylab="Age")
 
-boxplot(eliminated$bmi, main="Bmi distribution",
+boxplot(stroke_data$bmi, main="Bmi distribution",
    xlab="ID", ylab="bmi")
 
-boxplot(eliminated$avg_glucose_level, main="Avg glucose level distribution",
+boxplot(stroke_data$avg_glucose_level, main="Avg glucose level distribution",
    xlab="ID", ylab="avg_glucose_level")
-
 ```
 
-
+### Outlier removal based on IQR
 ```{r}
 #IQR
 
-Q_age <- quantile(stroke_data_clean$age, probs=c(.25, .75), na.rm = FALSE)
-iqr_age <- IQR(stroke_data_clean$age)
+Q_age <- quantile(stroke_data$age, probs=c(.25, .75), na.rm = FALSE)
+iqr_age <- IQR(stroke_data$age)
 
-Q_bmi<- quantile(stroke_data_clean$bmi, probs=c(.25, .75), na.rm = FALSE)
-iqr_bmi <- IQR(stroke_data_clean$bmi)
+Q_bmi<- quantile(stroke_data$bmi, probs=c(.25, .75), na.rm = FALSE)
+iqr_bmi <- IQR(stroke_data$bmi)
  
-Q_avg_glucose_level<- quantile(stroke_data_clean$avg_glucose_level, probs=c(.25, .75), na.rm = FALSE)
-iqr_avg_glucose_level <- IQR(stroke_data_clean$avg_glucose_level)
+Q_avg_glucose_level<- quantile(stroke_data$avg_glucose_level, probs=c(.25, .75), na.rm = FALSE)
+iqr_avg_glucose_level <- IQR(stroke_data$avg_glucose_level)
 
 
-eliminated<- subset(stroke_data_clean, 
-                    stroke_data_clean$age > (Q_age[1] - 1.5*iqr_age) & 
-                    stroke_data_clean$age < (Q_age[2]+1.5*iqr_age) & 
-                    stroke_data_clean$bmi > (Q_bmi[1] - 1.5*iqr_bmi) & 
-                    stroke_data_clean$bmi < (Q_bmi[2]+1.5*iqr_bmi) & 
-                    stroke_data_clean$avg_glucose_level > (Q_avg_glucose_level[1] - 1.5*iqr_avg_glucose_level) &
-                    stroke_data_clean$avg_glucose_level < (Q_avg_glucose_level[2]+1.5*iqr_avg_glucose_level))
+stroke_data_clean<- subset(stroke_data, 
+                    stroke_data$age > (Q_age[1] - 1.5*iqr_age) & 
+                    stroke_data$age < (Q_age[2] + 1.5*iqr_age) & 
+                    stroke_data$bmi > (Q_bmi[1] - 1.5*iqr_bmi) & 
+                    stroke_data$bmi < (Q_bmi[2] + 1.5*iqr_bmi) & 
+                    stroke_data$avg_glucose_level > (Q_avg_glucose_level[1] - 1.5*iqr_avg_glucose_level) &
+                    stroke_data$avg_glucose_level < (Q_avg_glucose_level[2]+1.5*iqr_avg_glucose_level))
 
-
-
-
+str(stroke_data_clean)
+str(stroke_data)
 ```
+
 
 ```{r}
 #boxplot after outlier removal
-boxplot(eliminated$age, main="Age distribution",
+boxplot(stroke_data_clean$age, main="Age distribution",
    xlab="ID", ylab="Age")
 
-boxplot(eliminated$bmi, main="Bmi distribution",
+boxplot(stroke_data_clean$bmi, main="Bmi distribution",
    xlab="ID", ylab="bmi")
 
-boxplot(eliminated$avg_glucose_level, main="Avg glucose level distribution",
+boxplot(stroke_data_clean$avg_glucose_level, main="Avg glucose level distribution",
    xlab="ID", ylab="avg_glucose_level")
-
-table(eliminated$stroke)
-
-# min max standardization function
-fun_range <- function(x) {                             
-  (x - min(x)) / (max(x) - min(x))
-}
-# perform normalization
-eliminated$age <- fun_range(x = eliminated$age)
-eliminated$bmi <- fun_range(x = eliminated$bmi)
-eliminated$avg_glucose_level <- fun_range(x = eliminated$avg_glucose_level)
-
-
 ```
+
+
+
+
 ```{r}
-eliminated$stroke<-as.factor(eliminated$stroke)
+# # min max standardization function
+# fun_range <- function(x) {                             
+#   (x - min(x)) / (max(x) - min(x))
+# }
+# # perform normalization
+# stroke_data_clean$age <- fun_range(x = stroke_data_clean$age)
+# stroke_data_clean$bmi <- fun_range(x = stroke_data_clean$bmi)
+# stroke_data_clean$avg_glucose_level <- fun_range(x = stroke_data_clean$avg_glucose_level)
+```
+
+# Modeling
+
+
+```{r}
 
 # train test split
-split1<- sample(c(rep(0, 0.7 * nrow(eliminated)), rep(1, 0.3 * nrow(eliminated))))
 
-train <- eliminated[split1 == 0, ]
-test <- eliminated[split1== 1, ]
+train <- sample(1:nrow(stroke_data_clean),nrow(stroke_data_clean)*0.7)
 
-rf <- randomForest(stroke ~., data = train, mtry =sqrt(ncol(train) - 1), ntree = 500)
+train_data <- stroke_data_clean[train, ]
+test_data <- stroke_data_clean[-train, ]
+
+rf <- randomForest(stroke ~., data = train_data, mtry = sqrt(ncol(train_data) - 1), ntree = 500)
 
 
 # predicting the income value
-yhat_rf <- predict(rf, test[,-7])
+yhat_rf <- predict(rf, test_data[,-12])
 
 # accuracy
-acc_rf = mean(yhat_rf == test$stroke)
+acc_rf = mean(yhat_rf == test_data$stroke)
 
 # classification metrics
-cm <- confusionMatrix(yhat_rf, test$stroke, mode = "everything", positive="1")
+cm <- confusionMatrix(yhat_rf, test_data$stroke, mode = "everything", positive="1")
 cm
 ```
-Due to a high class imbalance all the entries are classified as belonging to class 0. This will lead to Pecision and Recall value of "0", thus making the F1-score undefined.
+Due to a high class imbalance all the entries are classified as belonging to class 0. This will lead to Precision and Recall value of "0", thus making the F1-score undefined.
+
+# Oversampling to handle the imbalance in the data
+
+
+# ROSE
 
 ```{r}
-# data <- ROSE(stroke~., stroke_data_clean, p=0.5, hmult.majo=1, hmult.mino=1)$data
-data_balanced_over <- ovun.sample(stroke~ ., data = train, p=0.6, method = "over")$data
+# data <- ROSE(stroke~., stroke_data, p=0.5, hmult.majo=1, hmult.mino=1)$data
+data_balanced_over <- ovun.sample(stroke~ ., data = train_data, p=0.6, method = "over")$data
 table(data_balanced_over$stroke)
 ```
 
-The data is highly impbalanced due to the fact the there are very few people having suffered from stroke. So to reduce the class imbalance we use over smapling techniques to replicate some data with affecting the probabilty distribution of predictors in the data set. 
+The data is highly imbalanced due to the fact the there are very few people having suffered from stroke. So to reduce the class imbalance we use over smapling techniques to replicate some data with affecting the probabilty distribution of predictors in the data set. 
 
 But, before that we need to remove the outliers from the dataset.
 
 
 
 ```{r}
-data_balanced <- rbind(train, data_balanced_over)
+data_balanced <- rbind(train_data, data_balanced_over)
 data_balanced
 table(data_balanced$stroke)
 ```
@@ -247,6 +440,7 @@ plot(d, main="Distribution for Avg_glucose_level")
 polygon(d, col="yellow", border="blue")
 ```
 
+
 ```{r}
 
 wn = sum(data_balanced$stroke =="0")/length(data_balanced$stroke)
@@ -256,13 +450,13 @@ rf <- randomForest(stroke ~., data = data_balanced, mtry =sqrt(ncol(data_balance
 
 
 # predicting the income value
-yhat_rf <- predict(rf, test[,-7])
+yhat_rf <- predict(rf, test_data[,-14])
 
 # accuracy
-acc_rf = mean(yhat_rf == test$stroke)
+acc_rf = mean(yhat_rf == test_data$stroke)
 
 # classification metrics
-cm <- confusionMatrix(yhat_rf, test$stroke, mode = "everything", positive="1")
+cm <- confusionMatrix(yhat_rf, test_data$stroke, mode = "everything", positive="1")
 cm
 ```
 
@@ -271,3 +465,6 @@ Applying random forest to the data
 ```{r}
 table(test$stroke)
 ```
+
+
+
