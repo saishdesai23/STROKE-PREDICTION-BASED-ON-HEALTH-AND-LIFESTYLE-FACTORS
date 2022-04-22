@@ -539,5 +539,22 @@ cm <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything
 cm
 ```
 
+# using naive bayes on the dataset
+```{r}
+set.seed(1)
+library(e1071)
+nbfit <- naiveBayes ( stroke ~ ., data = train_data, prior = 1)
+```
 
+#testing data accuracy
+```{r}
+test_data$stroke<- as.factor(test_data$stroke)
+levels(test_data$stroke)=c(0,1)
+test.pred <- predict (nbfit , test_data)
+# accuracy
+acc_rf = mean(test.pred == test_data$stroke)
+cm <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
+cm
+
+```
 
