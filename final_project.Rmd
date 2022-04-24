@@ -6,7 +6,7 @@ title: |
 author: 'Saish Desai, Anish Shetty, Vishnupriya Singh'
 output: pdf_document 
 ---
-
+# Importing all the libraries
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -25,10 +25,20 @@ library(randomForest)
 library(caret)
 library(MASS)
 library(xgboost)
+library(imbalance)
 ```
+
 # Introduction
 
+A stroke occurs when the oxygen and nutrient supply to the brain is interrupted by either a blocked artery or the leaking/bursting of a blood vessel. When that happens, the brain cannot get the blood and oxygen it needs, due to which the brain cells die. According to the American Stroke Organization, Stroke is the No 5. Cause of death and the leading cause of disability in the United States, and may depend on a person’s health, habits, and lifestyle. For this project, we have taken a dataset from Kaggle with predictors representing all these causes of stroke with an aim to predict whether a person is likely to get a stroke. The dataset has ‘5110’ observations, where each observation corresponds to a single person. The dataset has 12 variables – 11 independent variables/predators and 1 binary response variable. The outcome is ‘1’ if the person gets a stroke and ‘0’ otherwise.
+
 # Research Questions
+
+1) Given the information of a person from the list of predictors, can we predict if the person is likely to get a stroke?
+
+2) Which factors are important in influencing whether a person is likely to get a stroke or not?
+
+3) Will creating a balanced data set will give better prediction results
 
 # Data Cleaning & Analysis
 
@@ -37,16 +47,16 @@ library(xgboost)
 stroke_data = read.csv("healthcare-dataset-stroke-data.csv")
 head(stroke_data)
 ```
-### Dataset Description and EDA
 
+### Dataset Description and EDA
 ```{r}
 str(stroke_data)
 ```
-## Understanding the distribution of variables.
+### Understanding the distribution of variables.
 
-# Categorical Variables
+Categorical Variables
 
-## 1. Gender
+### 1. Gender
 
 ```{r}
 gender_counts <- as.data.frame(table(stroke_data$gender))
@@ -57,7 +67,7 @@ ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var1)) +
         labs(x ="Gender", y = "Frequency")
 ```
 
-## 2. Hypertension
+### 2. Hypertension
 ```{r}
 ht_counts <- as.data.frame(table(stroke_data$hypertension))
 ht_counts$Var1 <- if_else(ht_counts$Var1 == 0, 'No','Yes')
@@ -79,7 +89,7 @@ ggplot(hypstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
 ```
 
 
-## 3. Heart Disease
+### 3. Heart Disease
 
 ```{r}
 hd_counts <- as.data.frame(table(stroke_data$heart_disease))
@@ -101,7 +111,7 @@ ggplot(hdstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         labs(x ="Heart Disease", y = "Frequency", fill = 'Stroke')
 ```
 
-## 4. Ever Married
+### 4. Ever Married
 
 ```{r}
 
@@ -123,7 +133,7 @@ ggplot(mstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
 
 ```
 
-## 5. Work Type
+### 5. Work Type
 
 
 ```{r}
@@ -146,7 +156,7 @@ ggplot(wtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
 
 ```
 
-## 6. Residence Type
+### 6. Residence Type
 
 ```{r}
 
@@ -168,7 +178,7 @@ ggplot(rtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
 
 ```
 
-## 7. Smoking Status
+### 7. Smoking Status
 ```{r}
 
 ss_counts <- as.data.frame(table(stroke_data$smoking_status))
@@ -191,8 +201,7 @@ ggplot(ssstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
 
 # Continous Variables
 
-## 8. Age
-
+### 8. Age
 ```{r}
 #reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
 
@@ -201,8 +210,7 @@ ggplot(stroke_data, aes(x=age)) +
   geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
 ```
-## 9. Avg Glucose Level
-
+### 9. Avg Glucose Level
 ```{r}
 
 ggplot(stroke_data, aes(x=avg_glucose_level)) + 
@@ -212,8 +220,7 @@ ggplot(stroke_data, aes(x=avg_glucose_level)) +
 
 
 
-## 10. BMI
-
+### 10. BMI
 ```{r}
 #reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
 stroke_data$bmi <- as.integer(stroke_data$bmi)
@@ -223,8 +230,7 @@ ggplot(stroke_data, aes(x=bmi)) +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
 ```
 
-## 11. Stroke
-
+### 11. Stroke
 ```{r}
 s_counts <- as.data.frame(table(stroke_data$stroke))
 
@@ -300,7 +306,7 @@ polygon(d, col="yellow", border="blue")
 
 ```
 
-Imputation of missing values with mean of the values from the column 'bmi'
+### Imputation of missing values with mean of the values from the column 'bmi'
 ```{r}
 stroke_data$bmi[is.na(stroke_data$bmi)] <- mean(stroke_data$bmi, na.rm = TRUE)
 stroke_data <- na.omit(stroke_data)
@@ -359,34 +365,19 @@ boxplot(stroke_data_clean$avg_glucose_level, main="Avg glucose level distributio
    xlab="ID", ylab="avg_glucose_level")
 ```
 
-
-
-
-```{r}
-# # min max standardization function
-# fun_range <- function(x) {                             
-#   (x - min(x)) / (max(x) - min(x))
-# }
-# # perform normalization
-# stroke_data_clean$age <- fun_range(x = stroke_data_clean$age)
-# stroke_data_clean$bmi <- fun_range(x = stroke_data_clean$bmi)
-# stroke_data_clean$avg_glucose_level <- fun_range(x = stroke_data_clean$avg_glucose_level)
-```
-
 # Modeling
 
-
+# splitting the data set into train and test set
 ```{r}
-
 # train test split
-
 train <- sample(1:nrow(stroke_data_clean),nrow(stroke_data_clean)*0.7)
-
 train_data <- stroke_data_clean[train, ]
 test_data <- stroke_data_clean[-train, ]
+```
 
+# Random Forest on unbalanced data set
+```{r}
 rf <- randomForest(stroke ~., data = train_data, mtry = sqrt(ncol(train_data) - 1), ntree = 500)
-
 
 # predicting the income value
 yhat_rf <- predict(rf, test_data[,-12])
@@ -395,34 +386,24 @@ yhat_rf <- predict(rf, test_data[,-12])
 acc_rf = mean(yhat_rf == test_data$stroke)
 
 # classification metrics
-cm <- confusionMatrix(yhat_rf, test_data$stroke, mode = "everything", positive="1")
-cm
+cm_rf <- confusionMatrix(yhat_rf, test_data$stroke, mode = "everything", positive="1")
+cm_rf
 ```
 Due to a high class imbalance all the entries are classified as belonging to class 0. This will lead to Precision and Recall value of "0", thus making the F1-score undefined.
 
 # Oversampling to handle the imbalance in the data
 
-
-# ROSE
-
+# Using ovun.sample over sampling technique
 ```{r}
 # data <- ROSE(stroke~., stroke_data, p=0.5, hmult.majo=1, hmult.mino=1)$data
-data_balanced_over <- ovun.sample(stroke~ ., data = train_data, p=0.6, method = "over")$data
-table(data_balanced_over$stroke)
+data_balanced <- ovun.sample(stroke~ ., data = train_data, p=0.3, method = "over")$data
+table(data_balanced$stroke)
 ```
 
 The data is highly imbalanced due to the fact the there are very few people having suffered from stroke. So to reduce the class imbalance we use over smapling techniques to replicate some data with affecting the probabilty distribution of predictors in the data set. 
 
-But, before that we need to remove the outliers from the dataset.
 
-
-
-```{r}
-data_balanced <-  data_balanced_over
-# data_balanced
-table(data_balanced$stroke)
-```
-## Distribution of Numerical variables in the Unbalanced Dataset
+## Distribution of Numerical variables in the balanced Dataset
 ```{r}
 # distribution of balanced data
 
@@ -442,38 +423,31 @@ plot(d, main="Distribution for Avg_glucose_level")
 polygon(d, col="yellow", border="blue")
 ```
 
-
 ```{r}
 
 wn = sum(data_balanced$stroke =="0")/length(data_balanced$stroke)
 wy = 1
 
-rf <- randomForest(stroke ~., data = data_balanced, 
+rf_balanced <- randomForest(stroke ~., data = data_balanced, 
                    mtry =sqrt(ncol(data_balanced) - 1), 
                    classwt = c("0"=wn, "1"=wy), ntree = 500)
 
 
 # predicting the income value
-yhat_rf <- predict(rf, test_data[,-14])
+yhat_rf_balanced <- predict(rf_balanced, test_data[,-14])
 
 # accuracy
-acc_rf = mean(yhat_rf == test_data$stroke)
+acc_rf_balanced = mean(yhat_rf_balanced == test_data$stroke)
 
 # classification metrics
-cm <- confusionMatrix(yhat_rf, test_data$stroke, mode = "everything", positive="1")
-cm
+cm_rf_balanced <- confusionMatrix(yhat_rf_balanced, test_data$stroke, mode = "everything", positive="1")
+cm_rf_balanced
 ```
-
-
-Applying random forest to the data
-```{r}
-table(test_data$stroke)
-```
-
 # SMOTE
 Another way to sample the data is SMOTE which results in minority sampling. 
 Applying the same on training data, we get the following results.
-Before that, data should be converted to numeric first.
+Before that, data should be converted to numeric.
+
 ```{r}
 cols<- c("gender", "hypertension", "heart_disease", "ever_married", "work_type", "Residence_type","smoking_status" )
 train_data[cols]<-lapply(train_data[cols], as.numeric)
@@ -481,9 +455,6 @@ test_data[cols]<-lapply(test_data[cols], as.numeric)
 ```
 
 ```{r}
-library(imbalance)
-#train_data<-train_data[,-1]
-#test_data<-test_data[,-1]
 data_balanced_smote<-oversample(train_data, ratio = 0.6, method = "SMOTE", classAttr = "stroke")
 table(data_balanced_smote$stroke)
 ```
@@ -510,83 +481,133 @@ polygon(d, col="yellow", border="blue")
 ```
 
 # Random Forest on the Balanced Dataset
-
 ```{r}
 library(randomForest)
+
+# modelling
 data_balanced_smote$stroke<-as.factor(data_balanced_smote$stroke)
-rf <- randomForest(stroke ~., data = data_balanced_smote, mtry =sqrt(ncol(data_balanced_smote) - 1), ntree = 500)
+rf_smote <- randomForest(stroke ~., data = data_balanced_smote, mtry =sqrt(ncol(data_balanced_smote) - 1), ntree = 500)
+
 # predicting the income value
-yhat_rf <- predict(rf, test_data)
+yhat_rf_smote <- predict(rf_smote, test_data)
+
 # accuracy
-acc_rf = mean(yhat_rf == test_data$stroke)
-cm <- confusionMatrix(yhat_rf, as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+acc_rf_smote = mean(yhat_rf_smote == test_data$stroke)
+
+# confusion matrix
+cm_rf_smote <- confusionMatrix(yhat_rf_smote, as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_rf_smote
 ```
 # Applying bagging and boosting
 ```{r}
-library(randomForest)
 data_balanced_smote$stroke<-as.factor(data_balanced_smote$stroke)
-rf <- randomForest(stroke ~., data = data_balanced_smote, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
+bagging <- randomForest(stroke ~., data = data_balanced_smote, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
+
 # predicting the income value
-yhat_rf <- predict(rf, test_data)
+yhat_bagging <- predict(bagging, test_data)
+
 # accuracy
-acc_rf = mean(yhat_rf == test_data$stroke)
-cm <- confusionMatrix(yhat_rf, as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+acc_bagging = mean(yhat_bagging == test_data$stroke)
+
+# confusion matrix
+cm_bagging <- confusionMatrix(yhat_bagging, as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_bagging
 ```
  
 # Boosting
 ```{r}
+set.seed(1)
 data_balanced_smote$stroke=as.numeric(data_balanced_smote$stroke)
 data_balanced_smote$stroke = as.numeric(ifelse(data_balanced_smote$stroke == 1, "0", "1"))
-set.seed (1)
+
 library (gbm)
 boost.data <- gbm(stroke~ ., data = data_balanced_smote,
 distribution = "bernoulli", n.trees = 500,
 interaction.depth = 4)
 a = summary(predict(boost.data,test_data))
 a
+
+# prediction
 yhat.boost.test <- ifelse(predict(boost.data ,newdata = test_data, n.trees =500)>a[4],1,0) #min+max/2
+
+# accuracy
 acc_boost = mean(yhat.boost.test == test_data$stroke)
-cm <- confusionMatrix(as.factor(yhat.boost.test), as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+
+# confusion matrix
+cm_boost <- confusionMatrix(as.factor(yhat.boost.test), as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_boost
+```
+# SVM on Unbalanced Dataset
+```{r}
+library(e1071)
+
+# model fitting
+svmfit <- svm (stroke ~ ., 
+               data = train_data,
+               kernel = "linear",
+               cost = 0.5, 
+               scale = FALSE)
+
+# prediction
+test_data$stroke<- as.factor(test_data$stroke)
+levels(test_data$stroke)=c(0,1)
+test.pred <- predict (svmfit , test_data)
+
+# accuracy
+acc_svm = mean(test.pred == test_data$stroke)
+
+# confusion matrix
+cm_svm <- confusionMatrix(test.pred, test_data$stroke, mode = "everything", positive="1")
+cm_svm
+
+
 ```
 
 # SVM on Balanced Dataset
 ```{r}
 library(e1071)
-svmfit <- svm ( stroke ~ ., data = data_balanced_smote , kernel = "linear",
-cost = 0.5, scale = FALSE)
 
-```
+# model fitting
+svmfit <- svm (stroke ~ ., 
+               data = data_balanced_smote,
+               kernel = "linear",
+               cost = 0.5, 
+               scale = FALSE)
 
-```{r}
+# prediction
 test_data$stroke<- as.factor(test_data$stroke)
 levels(test_data$stroke)=c(0,1)
-test.pred <- predict (svmfit , test_data)
+test.pred_balanced  <- predict (svmfit , test_data)
+
 # accuracy
-acc_rf = mean(test.pred == test_data$stroke)
-cm <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+acc_svm_balanced = mean(test.pred_balanced == test_data$stroke)
+
+# confusion matrix
+cm_svm_balanced <- confusionMatrix(test.pred_balanced, test_data$stroke, mode = "everything", positive="1")
+cm_svm_balanced
+
+
 ```
 
 # Naive Bayes on Unbalanced Dataset by using prior = 1
 ```{r}
 set.seed(1)
 library(e1071)
-nbfit <- naiveBayes ( stroke ~ ., data = train_data, prior = 1)
-```
 
-
-```{r}
+nbfit <- naiveBayes(stroke ~ ., data = train_data, prior = 1)
 test_data$stroke<- as.factor(test_data$stroke)
 levels(test_data$stroke)=c(0,1)
+
+# prediction
 test.pred <- predict (nbfit , test_data)
+
 # accuracy
-acc_rf = mean(test.pred == test_data$stroke)
-acc_rf
-cm <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+acc_nb = mean(test.pred == test_data$stroke)
+acc_nb
+
+# confusion matrix
+cm_nb <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_nb
 ```
 
 
@@ -594,19 +615,21 @@ cm
 ```{r}
 set.seed(1)
 library(e1071)
+
 nbfit_balanced <- naiveBayes ( stroke ~ ., data = data_balanced_smote, prior = 1)
-```
-
-
-```{r}
 test_data$stroke<- as.factor(test_data$stroke)
 levels(test_data$stroke)=c(0,1)
-nbfit_balanced_pred <- predict(nbfit , test_data)
+
+
+nbfit_balanced_pred <- predict(nbfit_balanced , test_data)
+
 # accuracy
-acc_rf = mean(nbfit_balanced_pred == test_data$stroke)
-acc_rf
-cm <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+acc_nb_balanced = mean(nbfit_balanced_pred == test_data$stroke)
+acc_nb_balanced
+
+# confusion matrix
+cm_nb_balanced <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_nb_balanced
 ```
 
 
@@ -617,9 +640,7 @@ cm
 lda_unbalanced <- lda(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = train_data)
 
 lda_unbalanced
-```
 
-```{r}
 lda_unbalanced_predict <- predict(lda_unbalanced, test_data)
 lda_class <- lda_unbalanced_predict$class
 
@@ -627,8 +648,8 @@ table(lda_class , test_data$stroke)
 mean(lda_unbalanced_predict$class != test_data$stroke)
 
 test_data$stroke = as.factor(test_data$stroke)
-cm <- confusionMatrix(lda_unbalanced_predict$class, test_data$stroke, mode = "everything", positive="1")
-cm
+cm_lda <- confusionMatrix(lda_unbalanced_predict$class, test_data$stroke, mode = "everything", positive="1")
+cm_lda
 ```
 
 
@@ -639,9 +660,7 @@ cm
 lda_balanced <- lda(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = data_balanced_smote)
 
 lda_balanced
-```
 
-```{r}
 lda_balanced_predict <- predict(lda_balanced, test_data)
 lda_class <- lda_balanced_predict$class
 
@@ -649,8 +668,8 @@ table(lda_class , test_data$stroke)
 mean(lda_balanced_predict$class != test_data$stroke)
 
 test_data$stroke = as.factor(test_data$stroke)
-cm <- confusionMatrix(lda_balanced_predict$class, test_data$stroke, mode = "everything", positive="1")
-cm
+cm_lda_balanced <- confusionMatrix(lda_balanced_predict$class, test_data$stroke, mode = "everything", positive="1")
+cm_lda_balanced
 ```
 
 #Logistic on Unbalanced Dataset
@@ -659,8 +678,7 @@ cm
 log_unbalanced = glm(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = train_data, family="binomial")
 
 summary(log_unbalanced)
-```
-```{r}
+
 log_unbalanced_pred = predict(log_unbalanced,test_data,type='response')
 log_unbalanced_prob = ifelse(log_unbalanced_pred>.5,1,0)
 
@@ -675,8 +693,8 @@ levels(log_unbalanced_prob)=c(0,1)
 
 test_data$stroke<- as.factor(test_data$stroke)
 levels(test_data$stroke)=c(0,1)
-cm <- confusionMatrix(as.factor(log_unbalanced_prob), as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+cm_lr <- confusionMatrix(as.factor(log_unbalanced_prob), as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_lr
 ```
 
 
@@ -686,10 +704,7 @@ cm
 log_balanced = glm(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = data_balanced_smote, family="binomial")
 
 summary(log_balanced)
-```
 
-
-```{r}
 log_balanced_pred = predict(log_balanced,test_data,type='response')
 log_balanced_prob = ifelse(log_balanced_pred>.5,1,0)
 
@@ -703,8 +718,8 @@ levels(log_balanced_prob)=c(0,1)
 
 test_data$stroke<- as.factor(test_data$stroke)
 levels(test_data$stroke)=c(0,1)
-cm <- confusionMatrix(as.factor(log_balanced_prob), as.factor(test_data$stroke), mode = "everything", positive="1")
-cm
+cm_lr_balanced <- confusionMatrix(as.factor(log_balanced_prob), as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_lr_balanced
 ```
 
 ## XGBoost on unbalanced data
@@ -731,14 +746,14 @@ postive_cases <- sum(y_train == "1")
 
 
 stroke_xgboost <- xgboost(data = dtrain,
-nrounds =10,
-max.depth = 3,
-objective = "binary:logistic",
-early_stopping_rounds = 3,
-scale_pos_weight = negative_cases/postive_cases)
+                          nrounds =10,
+                          max.depth = 3,
+                          objective = "binary:logistic",
+                          early_stopping_rounds = 3,
+                          scale_pos_weight = negative_cases/postive_cases)
 
 
-
+# prediction
 pred <- predict(stroke_xgboost, dtest)
 pred_class <- as.integer(pred > 0.4)
 
@@ -796,12 +811,12 @@ pred_class <- as.integer(pred > 0.4)
 
 # accuracy
 test <- ifelse(as.numeric(test_data$stroke) == 2 , 1, 0)
-accuracy_xgboost = mean(pred_class == test)
-accuracy_xgboost
+accuracy_xgboost_balanced = mean(pred_class == test)
+accuracy_xgboost_balanced
 
 
 
 # confusion matrix
-cm_xgboost <- confusionMatrix(as.factor(pred_class), as.factor(test), mode = "everything", positive="1")
-cm_xgboost
+cm_xgboost_balanced <- confusionMatrix(as.factor(pred_class), as.factor(test), mode = "everything", positive="1")
+cm_xgboost_balanced
 ```
