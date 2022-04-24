@@ -540,7 +540,8 @@ cm_boost
 # SVM on Unbalanced Dataset
 ```{r}
 library(e1071)
-
+train_data$stroke<- as.factor(train_data$stroke)
+levels(train_data$stroke)=c(0,1)
 # model fitting
 svmfit <- svm (stroke ~ ., 
                data = train_data,
@@ -566,7 +567,9 @@ cm_svm
 # SVM on Balanced Dataset
 ```{r}
 library(e1071)
-
+data_balanced_smote$stroke<- as.factor(data_balanced_smote$stroke)
+levels(data_balanced_smote$stroke)=c(0,1)
+set.seed (1)
 # model fitting
 svmfit <- svm (stroke ~ ., 
                data = data_balanced_smote,
