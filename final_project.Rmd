@@ -24,8 +24,10 @@ library(tree)
 library(randomForest)
 library(caret)
 library(MASS)
-library(xgboost)
+library(xgboost) #xgboosting
 library(imbalance)
+library (gbm) # boosting
+library(pROC)
 ```
 
 # Introduction
@@ -61,10 +63,12 @@ Categorical Variables
 ```{r}
 gender_counts <- as.data.frame(table(stroke_data$gender))
 
-ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+gender_plot <- ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var1)) +
         geom_bar(stat = "identity") + theme(legend.position="none") +
         geom_text(aes(label = Freq), vjust = 0) +
         labs(x ="Gender", y = "Frequency")
+
+gender_plot
 ```
 
 ### 2. Hypertension
@@ -82,10 +86,11 @@ hypstr_counts <- as.data.frame(table(stroke_data$hypertension, stroke_data$strok
 hypstr_counts$Var1 <- if_else(hypstr_counts$Var1 == 0, 'No','Yes')
 hypstr_counts$Var2 <- if_else(hypstr_counts$Var2 == 0, 'No','Yes')
 
-ggplot(hypstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+hypo_plot <- ggplot(hypstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_bar(stat = "identity")  +
         geom_text(aes(label = Freq), vjust = 0) +
         labs(x ="Hypertension", y = "Frequency", fill = 'Stroke')
+hypo_plot
 ```
 
 
@@ -105,10 +110,11 @@ hdstr_counts <- as.data.frame(table(stroke_data$heart_disease, stroke_data$strok
 hdstr_counts$Var1 <- if_else(hdstr_counts$Var1 == 0, 'No','Yes')
 hdstr_counts$Var2 <- if_else(hdstr_counts$Var2 == 0, 'No','Yes')
 
-ggplot(hdstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+heart_plot <- ggplot(hdstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_bar(stat = "identity")  +
         geom_text(aes(label = Freq)) +
         labs(x ="Heart Disease", y = "Frequency", fill = 'Stroke')
+heart_plot
 ```
 
 ### 4. Ever Married
@@ -126,7 +132,7 @@ ggplot(m_counts, aes(x = Var1, y = Freq, fill = Var1)) +
 mstr_counts <- as.data.frame(table(stroke_data$ever_married, stroke_data$stroke))
 mstr_counts$Var2 <- if_else(mstr_counts$Var2 == 0, 'No','Yes')
 
-ggplot(mstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+married_plot <- ggplot(mstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_bar(stat = "identity")  +
         geom_text(aes(label = Freq)) +
         labs(x ="Marriage", y = "Frequency", fill = 'Stroke')
@@ -149,11 +155,12 @@ ggplot(wt_counts, aes(x = Var1, y = Freq, fill = Var1)) +
 wtstr_counts <- as.data.frame(table(stroke_data$work_type, stroke_data$stroke))
 wtstr_counts$Var2 <- if_else(wtstr_counts$Var2 == 0, 'No','Yes')
 
-ggplot(wtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+work_plot <- ggplot(wtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_bar(stat = "identity")  +
         geom_text(aes(label = Freq)) +
         labs(x ="Marriage", y = "Frequency", fill = 'Stroke')
 
+work_plot
 ```
 
 ### 6. Residence Type
@@ -171,11 +178,11 @@ ggplot(rt_counts, aes(x = Var1, y = Freq, fill = Var1)) +
 rtstr_counts <- as.data.frame(table(stroke_data$Residence_type, stroke_data$stroke))
 rtstr_counts$Var2 <- if_else(rtstr_counts$Var2 == 0, 'No','Yes')
 
-ggplot(rtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+residence_plot <- ggplot(rtstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_bar(stat = "identity")  +
         geom_text(aes(label = Freq)) +
         labs(x ="Residence Type", y = "Frequency", fill = 'Stroke')
-
+residence_plot
 ```
 
 ### 7. Smoking Status
@@ -192,12 +199,13 @@ ggplot(ss_counts, aes(x = Var1, y = Freq, fill = Var1)) +
 ssstr_counts <- as.data.frame(table(stroke_data$smoking_status, stroke_data$stroke))
 ssstr_counts$Var2 <- if_else(ssstr_counts$Var2 == 0, 'No','Yes')
 
-ggplot(ssstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+smoke_plot <- ggplot(ssstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_bar(stat = "identity")  +
         geom_text(aes(label = Freq)) +
         labs(x ="Smoking Status", y = "Frequency", fill = 'Stroke')
-
+smoke_plot
 ```
+
 
 # Continous Variables
 
@@ -206,14 +214,15 @@ ggplot(ssstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
 #reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
 
 
-ggplot(stroke_data, aes(x=age)) + 
+age_plot <- ggplot(stroke_data, aes(x=age)) + 
   geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
+age_plot
 ```
 ### 9. Avg Glucose Level
 ```{r}
 
-ggplot(stroke_data, aes(x=avg_glucose_level)) + 
+glucose_plot <- ggplot(stroke_data, aes(x=avg_glucose_level)) + 
   geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
 ```
@@ -225,21 +234,33 @@ ggplot(stroke_data, aes(x=avg_glucose_level)) +
 #reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
 stroke_data$bmi <- as.integer(stroke_data$bmi)
 
-ggplot(stroke_data, aes(x=bmi)) + 
+bmi_plot <- ggplot(stroke_data, aes(x=bmi)) + 
   geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
+bmi_plot
 ```
 
 ### 11. Stroke
 ```{r}
 s_counts <- as.data.frame(table(stroke_data$stroke))
 
-ggplot(s_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+stroke_plot <- ggplot(s_counts, aes(x = Var1, y = Freq, fill = Var1)) +
         geom_bar(stat = "identity") + theme(legend.position="none") +
         geom_text(aes(label = Freq)) +
         labs(x ="Residence Type", y = "Frequency")
+stroke_plot
 ```
 As we can see from the above graph, Our dependant variable stroke is highly imbalanced, Which is true in a realistic scenario as for a sample population, Number of people suffering from stroke is less.
+
+
+```{r}
+require(gridExtra)
+grid.arrange(gender_plot,hypo_plot,heart_plot,married_plot, nrow = 2, ncol=2)
+```
+```{r}
+
+grid.arrange(work_plot,residence_plot,smoke_plot,stroke_plot, nrow = 2, ncol=2)
+```
 
 Factorizing all the categorical variables
 
@@ -498,10 +519,9 @@ acc_rf_smote = mean(yhat_rf_smote == test_data$stroke)
 cm_rf_smote <- confusionMatrix(yhat_rf_smote, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_rf_smote
 ```
-# Applying bagging and boosting
+# Bagging on unbalanced data
 ```{r}
-data_balanced_smote$stroke<-as.factor(data_balanced_smote$stroke)
-bagging <- randomForest(stroke ~., data = data_balanced_smote, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
+bagging <- randomForest(stroke ~., data = train_data, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
 
 # predicting the income value
 yhat_bagging <- predict(bagging, test_data)
@@ -513,29 +533,69 @@ acc_bagging = mean(yhat_bagging == test_data$stroke)
 cm_bagging <- confusionMatrix(yhat_bagging, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_bagging
 ```
- 
-# Boosting
+# Bagging on balanced data
 ```{r}
-set.seed(1)
-data_balanced_smote$stroke=as.numeric(data_balanced_smote$stroke)
-data_balanced_smote$stroke = as.numeric(ifelse(data_balanced_smote$stroke == 1, "0", "1"))
+data_balanced_smote$stroke<-as.factor(data_balanced_smote$stroke)
+bagging_balanced <- randomForest(stroke ~., data = data_balanced_smote, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
 
-library (gbm)
-boost.data <- gbm(stroke~ ., data = data_balanced_smote,
-distribution = "bernoulli", n.trees = 500,
-interaction.depth = 4)
-a = summary(predict(boost.data,test_data))
+# predicting the income value
+yhat_bagging_balanced <- predict(bagging_balanced, test_data)
+
+# accuracy
+acc_bagging_balanced = mean(yhat_bagging_balanced == test_data$stroke)
+
+# confusion matrix
+cm_bagging_balanced <- confusionMatrix(yhat_bagging_balanced, as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_bagging_balanced
+```
+ 
+# Boosting on unbalanced data
+```{r}
+
+train_data$stroke=as.numeric(train_data$stroke)
+train_data$stroke = as.numeric(ifelse(train_data$stroke == 1, "0", "1"))
+
+boost <- gbm(stroke~ ., data = train_data,
+                        distribution = "bernoulli", 
+                        n.trees = 500,
+                        interaction.depth = 4)
+
+a = summary(predict(boost,test_data))
 a
 
 # prediction
-yhat.boost.test <- ifelse(predict(boost.data ,newdata = test_data, n.trees =500)>a[4],1,0) #min+max/2
+yhat_boost <- ifelse(predict(boost ,newdata = test_data, n.trees =500)>a[4],1,0) #min+max/2
 
 # accuracy
-acc_boost = mean(yhat.boost.test == test_data$stroke)
+acc_boost = mean(yhat_boost == test_data$stroke)
 
 # confusion matrix
-cm_boost <- confusionMatrix(as.factor(yhat.boost.test), as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_boost <- confusionMatrix(as.factor(yhat_boost), as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_boost
+```
+
+# Boosting on balanced data
+```{r}
+data_balanced_smote$stroke=as.numeric(data_balanced_smote$stroke)
+data_balanced_smote$stroke = as.numeric(ifelse(data_balanced_smote$stroke == 1, "0", "1"))
+
+boost_balanced <- gbm(stroke~ ., data = data_balanced_smote,
+                             distribution = "bernoulli", 
+                             n.trees = 500,
+                             interaction.depth = 4)
+
+a = summary(predict(boost_balanced,test_data))
+a
+
+# prediction
+yhat_boost_balanced <- ifelse(predict(boost_balanced ,newdata = test_data, n.trees =500)>a[4],1,0) #min+max/2
+
+# accuracy
+acc_boost_balanced = mean(yhat_boost_balanced == test_data$stroke)
+
+# confusion matrix
+cm_boost_balanced <- confusionMatrix(as.factor(yhat_boost_balanced), as.factor(test_data$stroke), mode = "everything", positive="1")
+cm_boost_balanced
 ```
 # SVM on Unbalanced Dataset
 ```{r}
@@ -648,7 +708,7 @@ lda_unbalanced_predict <- predict(lda_unbalanced, test_data)
 lda_class <- lda_unbalanced_predict$class
 
 table(lda_class , test_data$stroke)
-mean(lda_unbalanced_predict$class != test_data$stroke)
+acc_lda <- mean(lda_unbalanced_predict$class == test_data$stroke)
 
 test_data$stroke = as.factor(test_data$stroke)
 cm_lda <- confusionMatrix(lda_unbalanced_predict$class, test_data$stroke, mode = "everything", positive="1")
@@ -668,7 +728,7 @@ lda_balanced_predict <- predict(lda_balanced, test_data)
 lda_class <- lda_balanced_predict$class
 
 table(lda_class , test_data$stroke)
-mean(lda_balanced_predict$class != test_data$stroke)
+acc_lda_balanced <- mean(lda_balanced_predict$class == test_data$stroke)
 
 test_data$stroke = as.factor(test_data$stroke)
 cm_lda_balanced <- confusionMatrix(lda_balanced_predict$class, test_data$stroke, mode = "everything", positive="1")
@@ -686,7 +746,7 @@ log_unbalanced_pred = predict(log_unbalanced,test_data,type='response')
 log_unbalanced_prob = ifelse(log_unbalanced_pred>.5,1,0)
 
 log_unbalanced_prob <- unname(log_unbalanced_prob)
-mean(log_unbalanced_prob == test_data$stroke)
+acc_lr <- mean(log_unbalanced_prob == test_data$stroke)
 
 log_unbalanced_prob <- unname(log_unbalanced_prob)
 
@@ -712,7 +772,7 @@ log_balanced_pred = predict(log_balanced,test_data,type='response')
 log_balanced_prob = ifelse(log_balanced_pred>.5,1,0)
 
 log_balanced_prob <- unname(log_balanced_prob)
-mean(log_balanced_prob == test_data$stroke)
+acc_lr_balanced <- mean(log_balanced_prob == test_data$stroke)
 
 log_balanced_prob <- unname(log_balanced_prob)
 
@@ -731,26 +791,18 @@ cm_lr_balanced
 x_train <- data.matrix(subset(train_data, select = -c(stroke)))
 x_test <- data.matrix(subset(test_data, select = -c(stroke)))
 
-
-
 y_train <- data.matrix(train_data$stroke)
 y_test <- data.matrix(test_data$stroke)
-
-
 
 dtrain <- xgb.DMatrix(data = x_train, label= y_train)
 dtest <- xgb.DMatrix(data = x_test, label= y_test)
 
-
-
 negative_cases <- sum(y_train == "0")
 postive_cases <- sum(y_train == "1")
 
-
-
 stroke_xgboost <- xgboost(data = dtrain,
                           nrounds =10,
-                          max.depth = 3,
+                          max.depth = 5,
                           objective = "binary:logistic",
                           early_stopping_rounds = 3,
                           scale_pos_weight = negative_cases/postive_cases)
@@ -760,14 +812,10 @@ stroke_xgboost <- xgboost(data = dtrain,
 pred <- predict(stroke_xgboost, dtest)
 pred_class <- as.integer(pred > 0.4)
 
-
-
 # accuracy
 test <- ifelse(as.numeric(test_data$stroke) == 2 , 1, 0)
-accuracy_xgboost = mean(pred_class == test)
-accuracy_xgboost
-
-
+acc_xgboost = mean(pred_class == test)
+acc_xgboost
 
 # confusion matrix
 cm_xgboost <- confusionMatrix(as.factor(pred_class), as.factor(test), mode = "everything", positive="1")
@@ -781,22 +829,14 @@ cm_xgboost
 x_train <- data.matrix(subset(data_balanced_smote, select = -c(stroke)))
 x_test <- data.matrix(subset(test_data, select = -c(stroke)))
 
-
-
 y_train <- data.matrix(data_balanced_smote$stroke)
 y_test <- data.matrix(test_data$stroke)
-
-
 
 dtrain <- xgb.DMatrix(data = x_train, label= y_train)
 dtest <- xgb.DMatrix(data = x_test, label= y_test)
 
-
-
 negative_cases <- sum(y_train == "0")
 postive_cases <- sum(y_train == "1")
-
-
 
 stroke_xgboost <- xgboost(data = dtrain,
 nrounds =10,
@@ -805,21 +845,99 @@ objective = "binary:logistic",
 early_stopping_rounds = 3,
 scale_pos_weight = negative_cases/postive_cases)
 
-
-
 pred <- predict(stroke_xgboost, dtest)
-pred_class <- as.integer(pred > 0.4)
-
-
+pred_class_balanced <- as.integer(pred > 0.4)
 
 # accuracy
 test <- ifelse(as.numeric(test_data$stroke) == 2 , 1, 0)
-accuracy_xgboost_balanced = mean(pred_class == test)
-accuracy_xgboost_balanced
-
-
+acc_xgboost_balanced = mean(pred_class_balanced == test)
+acc_xgboost_balanced
 
 # confusion matrix
-cm_xgboost_balanced <- confusionMatrix(as.factor(pred_class), as.factor(test), mode = "everything", positive="1")
+cm_xgboost_balanced <- confusionMatrix(as.factor(pred_class_balanced), as.factor(test), mode = "everything", positive="1")
 cm_xgboost_balanced
+cm_xgboost_balanced[["byClass"]][7]
+```
+
+```{r}
+
+# accuracy
+acc <- c(acc_xgboost_balanced,acc_xgboost, acc_lr_balanced, acc_lr, acc_lda_balanced,
+acc_lda, acc_nb_balanced, acc_nb, 
+acc_svm_balanced, acc_svm, acc_bagging_balanced, acc_bagging,acc_boost_balanced, acc_boost, acc_rf_smote, acc_rf_balanced, acc_rf)
+
+# balanced accuracy
+balanced_acc <- c(cm_xgboost_balanced[["byClass"]][11], cm_xgboost_balanced[["byClass"]][11],cm_lr_balanced[["byClass"]][11], cm_lr[["byClass"]][11], cm_lda_balanced[["byClass"]][11], cm_lda[["byClass"]][11], cm_nb_balanced[["byClass"]][11], cm_nb[["byClass"]][11], cm_svm_balanced[["byClass"]][11], cm_svm[["byClass"]][11],cm_bagging_balanced[["byClass"]][11], cm_bagging[["byClass"]][11], cm_boost_balanced[["byClass"]][11], cm_boost[["byClass"]][11], cm_rf_smote[["byClass"]][11], cm_rf_balanced[["byClass"]][11], cm_rf[["byClass"]][11])
+
+# F1 score
+f1 <- c(cm_xgboost_balanced[["byClass"]][7], cm_xgboost_balanced[["byClass"]][7],cm_lr_balanced[["byClass"]][7], cm_lr[["byClass"]][7], cm_lda_balanced[["byClass"]][7], cm_lda[["byClass"]][7], cm_nb_balanced[["byClass"]][7], cm_nb[["byClass"]][7], cm_svm_balanced[["byClass"]][7], cm_svm[["byClass"]][7],cm_bagging_balanced[["byClass"]][7], cm_bagging[["byClass"]][7], cm_boost_balanced[["byClass"]][7], cm_boost[["byClass"]][7], cm_rf_smote[["byClass"]][7], cm_rf_balanced[["byClass"]][7], cm_rf[["byClass"]][7])
+
+# Sensitivity
+sense <- c(cm_xgboost_balanced[["byClass"]][1], cm_xgboost_balanced[["byClass"]][1],cm_lr_balanced[["byClass"]][1], cm_lr[["byClass"]][1], cm_lda_balanced[["byClass"]][1], cm_lda[["byClass"]][1], cm_nb_balanced[["byClass"]][1], cm_nb[["byClass"]][1], cm_svm_balanced[["byClass"]][1], cm_svm[["byClass"]][1],cm_bagging_balanced[["byClass"]][1], cm_bagging[["byClass"]][1], cm_boost_balanced[["byClass"]][1], cm_boost[["byClass"]][1], cm_rf_smote[["byClass"]][1], cm_rf_balanced[["byClass"]][1], cm_rf[["byClass"]][1])
+
+# model
+model <- c("xgboost_balanced", "xgboost", "LR_balanced", "LR", "LDA_balanced", "LDA", "NB_balanced", "NB", "SVM_balanced", "SVM", "Bagging_balanced", "Bagging", "Boost_balanced", "Boost", "RF_smote" ,"RF_balanced", "RF")
+
+model_performance <- data.frame(model, sense, f1 ,balanced_acc, acc)
+
+
+
+
+```
+
+```{r}
+cm_xgboost
+lda_balanced_predict$class
+roc_score=roc(test,pred_class) #AUC score
+plot(roc_score ,main ="ROC curve -- Logistic Regression ")
+
+acc_xgboost_balanced
+cm_xgboost_balanced[["byClass"]][1]
+acc_xgboost
+cm_xgboost[["byClass"]][1]
+
+print("lr")
+cm_lr_balanced[["byClass"]][1]
+acc_lr_balanced
+cm_lr[["byClass"]][1]
+acc_lr
+
+print("lda")
+cm_lda_balanced[["byClass"]][1]
+acc_lda_balanced
+cm_lda[["byClass"]][1]
+acc_lda
+
+print("nb")
+cm_nb_balanced[["byClass"]][1]
+acc_nb_balanced
+cm_nb[["byClass"]][1]
+acc_nb
+
+print("svm")
+cm_svm_balanced[["byClass"]][1]
+acc_svm_balanced
+cm_svm[["byClass"]][1]
+acc_svm
+
+print("bagging")
+cm_bagging_balanced[["byClass"]][1]
+acc_bagging_balanced
+cm_bagging[["byClass"]][1]
+acc_bagging
+
+print("boost")
+cm_boost_balanced[["byClass"]][7]
+acc_boost_balanced
+cm_boost[["byClass"]][7]
+acc_boost
+
+print("rf")
+cm_rf_smote[["byClass"]][7]
+acc_rf_smote
+cm_rf_balanced[["byClass"]][7]
+acc_rf_balanced
+cm_rf[["byClass"]][7]
+acc_rf
+cm_xgboost_balanced[["byClass"]]
 ```
