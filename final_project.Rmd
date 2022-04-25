@@ -28,6 +28,7 @@ library(xgboost) #xgboosting
 library(imbalance)
 library (gbm) # boosting
 library(pROC)
+library(tidyverse)
 ```
 
 # Introduction
@@ -879,11 +880,33 @@ sense <- c(cm_xgboost_balanced[["byClass"]][1], cm_xgboost_balanced[["byClass"]]
 model <- c("xgboost_balanced", "xgboost", "LR_balanced", "LR", "LDA_balanced", "LDA", "NB_balanced", "NB", "SVM_balanced", "SVM", "Bagging_balanced", "Bagging", "Boost_balanced", "Boost", "RF_smote" ,"RF_balanced", "RF")
 
 model_performance <- data.frame(model, sense, f1 ,balanced_acc, acc)
-
+model_performance[,'model']
 
 
 
 ```
+
+```{r}
+model_performance <- data.frame(t(model_performance))
+
+colnames(model_performance) <- c('XGBoost Balanced',"XGBoost","Logistic Regression Balanced","Logistic Regression",
+                                  "LDA_balanced","LDA","Naive Bayes Balanced","Naive Bayes",
+                                 "SVM_balanced","SVM","Bagging_balanced","Bagging"
+                                 ,"Boosting_balanced","Boosting","Random Forest smote","Random Forest balanced",
+                                 "Random Forest")
+model_performance <- model_performance[-c(1),]
+
+Imbalance_Models <- model_performance %>% 
+  dplyr::select('XGBoost','Logistic Regression',"LDA","Naive Bayes","SVM","Bagging","Boosting","Random Forest")
+rownames(Imbalance_Models) <- c('Sensitivity','F1-Score','Balanced Accuracy','Accuracy')
+
+Balance_Models <- model_performance %>% 
+  dplyr::select('XGBoost Balanced','Logistic Regression Balanced',"LDA_balanced","Naive Bayes Balanced","SVM_balanced","Bagging_balanced","Boosting_balanced","Random Forest smote")
+colnames(Balance_Models) <- c('XGBoost','Logistic Regression',"LDA","Naive Bayes","SVM","Bagging","Boosting","Random Forest")
+rownames(Balance_Models) <- c('Sensitivity','F1-Score','Balanced Accuracy','Accuracy')
+```
+
+
 
 ```{r}
 cm_xgboost
