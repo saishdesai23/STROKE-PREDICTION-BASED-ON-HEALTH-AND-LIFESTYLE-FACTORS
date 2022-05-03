@@ -1,17 +1,16 @@
 ---
 title: |
-    | Methods of Data Science: Final Project 
+    | Methods of Data Science IS 517: Final Project 
     | Stroke Prediction based on health and lifestyle factors
     
 author: 'Saish Desai, Anish Shetty, Vishnupriya Singh'
 output: pdf_document 
 ---
-# Importing all the libraries
+# 1. Importing all the libraries
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 # installation of all the packages
-# install.packages("ggstatsplot")
 
 # loading all the packages
 library("ggstatsplot") 
@@ -28,22 +27,21 @@ library(xgboost) #xgboosting
 library(imbalance)
 library (gbm) # boosting
 library(pROC)
-library(tidyverse)
 ```
 
-# Introduction
+# 2. Introduction
 
-A stroke occurs when the oxygen and nutrient supply to the brain is interrupted by either a blocked artery or the leaking/bursting of a blood vessel. When that happens, the brain cannot get the blood and oxygen it needs, due to which the brain cells die. According to the American Stroke Organization, Stroke is the No 5. Cause of death and the leading cause of disability in the United States, and may depend on a person’s health, habits, and lifestyle. For this project, we have taken a dataset from Kaggle with predictors representing all these causes of stroke with an aim to predict whether a person is likely to get a stroke. The dataset has ‘5110’ observations, where each observation corresponds to a single person. The dataset has 12 variables – 11 independent variables/predators and 1 binary response variable. The outcome is ‘1’ if the person gets a stroke and ‘0’ otherwise.
+A stroke occurs when the oxygen and nutrient supply to the brain is interrupted by either a blocked artery or the leaking/bursting of a blood vessel. When that happens, the brain cannot get the blood and oxygen it needs, due to which the brain cells die. According to the American Stroke Organization, Stroke is the No 5. Cause of death and the leading cause of disability in the United States, and may depend on a person’s health, habits, and lifestyle. For this project, we have taken a data set from Kaggle with predictors representing all these causes of stroke with an aim to predict whether a person is likely to get a stroke. The data set has ‘5110’ observations, where each observation corresponds to a single person. The data set has 12 variables – 11 independent variables/predictors and 1 binary response variable. The outcome is ‘1’ if the person gets a stroke and ‘0’ otherwise.
 
-# Research Questions
+# 3. Research Questions
 
 1) Given the information of a person from the list of predictors, can we predict if the person is likely to get a stroke?
 
 2) Which factors are important in influencing whether a person is likely to get a stroke or not?
 
-3) Will creating a balanced data set will give better prediction results
+3) How do we tackle the problem of an imbalanced dataset with positive class (stroke) as a minority?
 
-# Data Cleaning & Analysis
+# 3. Data Cleaning & Analysis
 
 ### Dataset Source : https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset
 ```{r}
@@ -240,6 +238,7 @@ bmi_plot <- ggplot(stroke_data, aes(x=bmi)) +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
 bmi_plot
 ```
+# Dependent Vairable
 
 ### 11. Stroke
 ```{r}
@@ -248,7 +247,7 @@ s_counts <- as.data.frame(table(stroke_data$stroke))
 stroke_plot <- ggplot(s_counts, aes(x = Var1, y = Freq, fill = Var1)) +
         geom_bar(stat = "identity") + theme(legend.position="none") +
         geom_text(aes(label = Freq)) +
-        labs(x ="Residence Type", y = "Frequency")
+        labs(x ="Stroke", y = "Frequency")
 stroke_plot
 ```
 As we can see from the above graph, Our dependant variable stroke is highly imbalanced, Which is true in a realistic scenario as for a sample population, Number of people suffering from stroke is less.
@@ -290,7 +289,7 @@ stroke_data$stroke<-as.factor(stroke_data$stroke)
 colMeans(is.na(stroke_data))*100
 ```
 
-
+### Analysis for imputation of missing values
 ```{r}
 mean_bmi <- mean(na.omit(stroke_data$bmi))
 median_bmi <- median(na.omit(stroke_data$bmi))
@@ -335,7 +334,6 @@ stroke_data <- na.omit(stroke_data)
 str(stroke_data)
 ```
 ### Checking for outliers
-
 ```{r}
 #boxplot before outlier removal
 boxplot(stroke_data$age, main="Age distribution",
@@ -387,9 +385,9 @@ boxplot(stroke_data_clean$avg_glucose_level, main="Avg glucose level distributio
    xlab="ID", ylab="avg_glucose_level")
 ```
 
-# Modeling
+# 4. Modeling
 
-# splitting the data set into train and test set
+### splitting the data set into train and test set
 ```{r}
 # train test split
 train <- sample(1:nrow(stroke_data_clean),nrow(stroke_data_clean)*0.7)
@@ -397,7 +395,7 @@ train_data <- stroke_data_clean[train, ]
 test_data <- stroke_data_clean[-train, ]
 ```
 
-# Random Forest on unbalanced data set
+### Random Forest on unbalanced data set
 ```{r}
 rf <- randomForest(stroke ~., data = train_data, mtry = sqrt(ncol(train_data) - 1), ntree = 500)
 
@@ -413,19 +411,17 @@ cm_rf
 ```
 Due to a high class imbalance all the entries are classified as belonging to class 0. This will lead to Precision and Recall value of "0", thus making the F1-score undefined.
 
-# Oversampling to handle the imbalance in the data
+### Oversampling to handle the imbalance in the data
 
-# Using ovun.sample over sampling technique
+### 1. Using ovun.sample oversampling technique
 ```{r}
-# data <- ROSE(stroke~., stroke_data, p=0.5, hmult.majo=1, hmult.mino=1)$data
 data_balanced <- ovun.sample(stroke~ ., data = train_data, p=0.3, method = "over")$data
 table(data_balanced$stroke)
 ```
 
-The data is highly imbalanced due to the fact the there are very few people having suffered from stroke. So to reduce the class imbalance we use over smapling techniques to replicate some data with affecting the probabilty distribution of predictors in the data set. 
+The data is highly imbalanced due to the fact the there are very few people having suffered from stroke. So to reduce the class imbalance we use oversampling techniques to replicate some data without affecting the probability distribution of predictors in the data set. To verify the probability distribution we compare the distribution plot for continuous variables before and after the balancing.
 
-
-## Distribution of Numerical variables in the balanced Dataset
+### Distribution of Numerical variables in the balanced Dataset
 ```{r}
 # distribution of balanced data
 
@@ -444,6 +440,7 @@ d <- density(na.omit(data_balanced$avg_glucose_level))
 plot(d, main="Distribution for Avg_glucose_level")
 polygon(d, col="yellow", border="blue")
 ```
+Here, we observe that the oversampling has not affected the continuous variable distribution for the model.
 
 ```{r}
 
@@ -465,26 +462,26 @@ acc_rf_balanced = mean(yhat_rf_balanced == test_data$stroke)
 cm_rf_balanced <- confusionMatrix(yhat_rf_balanced, test_data$stroke, mode = "everything", positive="1")
 cm_rf_balanced
 ```
-# SMOTE
-Another way to sample the data is SMOTE which results in minority sampling. 
-Applying the same on training data, we get the following results.
-Before that, data should be converted to numeric.
+However, the oversampling using "ovun.sample" has not improved the model performance. The model is still predicting all observations as majority class. So, we will switch to another method for oversampling. We will make use of Synthetic Minority Oversampling Technique (SMOTE) for balancing the data.
 
+### 2. Uisng SMOTE sampling technique
+
+For Applying SMOTE on training data we need to convert all the variables to a numerical value.
 ```{r}
 cols<- c("gender", "hypertension", "heart_disease", "ever_married", "work_type", "Residence_type","smoking_status" )
 train_data[cols]<-lapply(train_data[cols], as.numeric)
 test_data[cols]<-lapply(test_data[cols], as.numeric)
 ```
 
+### Class proportion for the balanced data
 ```{r}
 data_balanced_smote<-oversample(train_data, ratio = 0.6, method = "SMOTE", classAttr = "stroke")
 table(data_balanced_smote$stroke)
 ```
 
-Here SMOTE adds few rpws to the training dataset, reproducing minority(1) factor level.
+Here SMOTE adds few synthetic observations to the training data sets to increase the proportion of minority class (Class '1').
 
-#Distribution of Numerical variables after Balancing the dataset
-
+### Distribution of Numerical variables after Balancing the dataset
 ```{r}
 # distribution for BMI
 d <- density(na.omit(data_balanced_smote$bmi))
@@ -501,8 +498,10 @@ d <- density(na.omit(data_balanced_smote$avg_glucose_level))
 plot(d, main="Distribution for Avg_glucose_level")
 polygon(d, col="yellow", border="blue")
 ```
+We can observe that adding synthetic observations to balance the data does not affect the distribution for continuous variables.
 
-# Random Forest on the Balanced Dataset
+
+### Random Forest on the Balanced Dataset
 ```{r}
 library(randomForest)
 
@@ -520,7 +519,10 @@ acc_rf_smote = mean(yhat_rf_smote == test_data$stroke)
 cm_rf_smote <- confusionMatrix(yhat_rf_smote, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_rf_smote
 ```
-# Bagging on unbalanced data
+### Applying other supervised machine learning models to balanced and imbalanced data.
+
+### 1. 
+### Bagging on unbalanced data
 ```{r}
 bagging <- randomForest(stroke ~., data = train_data, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
 
@@ -534,7 +536,7 @@ acc_bagging = mean(yhat_bagging == test_data$stroke)
 cm_bagging <- confusionMatrix(yhat_bagging, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_bagging
 ```
-# Bagging on balanced data
+### Bagging on balanced data
 ```{r}
 data_balanced_smote$stroke<-as.factor(data_balanced_smote$stroke)
 bagging_balanced <- randomForest(stroke ~., data = data_balanced_smote, mtry =ncol(data_balanced_smote) - 1, ntree = 500)
@@ -549,8 +551,8 @@ acc_bagging_balanced = mean(yhat_bagging_balanced == test_data$stroke)
 cm_bagging_balanced <- confusionMatrix(yhat_bagging_balanced, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_bagging_balanced
 ```
- 
-# Boosting on unbalanced data
+### 2. 
+### Boosting on unbalanced data
 ```{r}
 
 train_data$stroke=as.numeric(train_data$stroke)
@@ -575,7 +577,7 @@ cm_boost <- confusionMatrix(as.factor(yhat_boost), as.factor(test_data$stroke), 
 cm_boost
 ```
 
-# Boosting on balanced data
+### Boosting on balanced data
 ```{r}
 data_balanced_smote$stroke=as.numeric(data_balanced_smote$stroke)
 data_balanced_smote$stroke = as.numeric(ifelse(data_balanced_smote$stroke == 1, "0", "1"))
@@ -598,7 +600,8 @@ acc_boost_balanced = mean(yhat_boost_balanced == test_data$stroke)
 cm_boost_balanced <- confusionMatrix(as.factor(yhat_boost_balanced), as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_boost_balanced
 ```
-# SVM on Unbalanced Dataset
+### 3. 
+### SVM on Unbalanced Dataset
 ```{r}
 library(e1071)
 train_data$stroke<- as.factor(train_data$stroke)
@@ -624,8 +627,7 @@ cm_svm
 
 
 ```
-
-# SVM on Balanced Dataset
+### SVM on Balanced Dataset
 ```{r}
 library(e1071)
 data_balanced_smote$stroke<- as.factor(data_balanced_smote$stroke)
@@ -652,8 +654,8 @@ cm_svm_balanced
 
 
 ```
-
-# Naive Bayes on Unbalanced Dataset by using prior = 1
+### 4. 
+### Naive Bayes on Unbalanced Dataset by using prior = 1
 ```{r}
 set.seed(1)
 library(e1071)
@@ -673,9 +675,7 @@ acc_nb
 cm_nb <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_nb
 ```
-
-
-# Naive Bayes on Balanced Dataset by using prior = 1
+### Naive Bayes on Balanced Dataset by using prior = 1
 ```{r}
 set.seed(1)
 library(e1071)
@@ -695,11 +695,8 @@ acc_nb_balanced
 cm_nb_balanced <- confusionMatrix(test.pred, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_nb_balanced
 ```
-
-
-
-## LDA on Unbalanced Dataset
-
+### 5.
+### LDA on Unbalanced Dataset
 ```{r}
 lda_unbalanced <- lda(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = train_data)
 
@@ -715,11 +712,7 @@ test_data$stroke = as.factor(test_data$stroke)
 cm_lda <- confusionMatrix(lda_unbalanced_predict$class, test_data$stroke, mode = "everything", positive="1")
 cm_lda
 ```
-
-
-
-## LDA on Balanced dataset
-
+### LDA on Balanced dataset
 ```{r}
 lda_balanced <- lda(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = data_balanced_smote)
 
@@ -735,9 +728,8 @@ test_data$stroke = as.factor(test_data$stroke)
 cm_lda_balanced <- confusionMatrix(lda_balanced_predict$class, test_data$stroke, mode = "everything", positive="1")
 cm_lda_balanced
 ```
-
-#Logistic on Unbalanced Dataset
-
+### 6.
+### Logistic on Unbalanced Dataset
 ```{r}
 log_unbalanced = glm(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = train_data, family="binomial")
 
@@ -760,10 +752,7 @@ levels(test_data$stroke)=c(0,1)
 cm_lr <- confusionMatrix(as.factor(log_unbalanced_prob), as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_lr
 ```
-
-
-# Logistic on Balanced dataset
-
+### Logistic on Balanced dataset
 ```{r}
 log_balanced = glm(stroke ~ gender+age+hypertension+heart_disease+ever_married+work_type+Residence_type+avg_glucose_level+bmi+smoking_status, data = data_balanced_smote, family="binomial")
 
@@ -786,8 +775,9 @@ cm_lr_balanced <- confusionMatrix(as.factor(log_balanced_prob), as.factor(test_d
 cm_lr_balanced
 ```
 
-## XGBoost on unbalanced data
 
+### 7.
+### XGBoost on unbalanced data
 ```{r}
 x_train <- data.matrix(subset(train_data, select = -c(stroke)))
 x_test <- data.matrix(subset(test_data, select = -c(stroke)))
@@ -822,10 +812,7 @@ acc_xgboost
 cm_xgboost <- confusionMatrix(as.factor(pred_class), as.factor(test), mode = "everything", positive="1")
 cm_xgboost
 ```
-
-
-# XGBoost on Balanced data
-
+### XGBoost on Balanced data
 ```{r}
 x_train <- data.matrix(subset(data_balanced_smote, select = -c(stroke)))
 x_test <- data.matrix(subset(test_data, select = -c(stroke)))
@@ -859,7 +846,18 @@ cm_xgboost_balanced <- confusionMatrix(as.factor(pred_class_balanced), as.factor
 cm_xgboost_balanced
 cm_xgboost_balanced[["byClass"]][7]
 ```
+# 5. Model Evaluation
+Here we separately document the performance of selected models trained on balanced and imbalanced data.
 
+The performance parameters taken into consideration are-
+
+1) Accuracy
+
+2) Balanced Accuracy
+
+3) F1-score
+
+4) Sensitivity
 ```{r}
 
 # accuracy
@@ -880,20 +878,17 @@ sense <- c(cm_xgboost_balanced[["byClass"]][1], cm_xgboost_balanced[["byClass"]]
 model <- c("xgboost_balanced", "xgboost", "LR_balanced", "LR", "LDA_balanced", "LDA", "NB_balanced", "NB", "SVM_balanced", "SVM", "Bagging_balanced", "Bagging", "Boost_balanced", "Boost", "RF_smote" ,"RF_balanced", "RF")
 
 model_performance <- data.frame(model, sense, f1 ,balanced_acc, acc)
-model_performance[,'model']
-
-
-
+model_performance
 ```
+
 
 ```{r}
 model_performance <- data.frame(t(model_performance))
-
+print(model_performance)
 colnames(model_performance) <- c('XGBoost Balanced',"XGBoost","Logistic Regression Balanced","Logistic Regression",
                                   "LDA_balanced","LDA","Naive Bayes Balanced","Naive Bayes",
                                  "SVM_balanced","SVM","Bagging_balanced","Bagging"
-                                 ,"Boosting_balanced","Boosting","Random Forest smote","Random Forest balanced",
-                                 "Random Forest")
+                                 ,"Boosting_balanced","Boosting","Random Forest smote","Random  Forest balanced", "Random Forest")
 model_performance <- model_performance[-c(1),]
 
 Imbalance_Models <- model_performance %>% 
@@ -904,63 +899,17 @@ Balance_Models <- model_performance %>%
   dplyr::select('XGBoost Balanced','Logistic Regression Balanced',"LDA_balanced","Naive Bayes Balanced","SVM_balanced","Bagging_balanced","Boosting_balanced","Random Forest smote")
 colnames(Balance_Models) <- c('XGBoost','Logistic Regression',"LDA","Naive Bayes","SVM","Bagging","Boosting","Random Forest")
 rownames(Balance_Models) <- c('Sensitivity','F1-Score','Balanced Accuracy','Accuracy')
+
+Imbalance_Models
+
+Balance_Models
 ```
-
-
-
+Now we have consolidated the performance metrics in tabular format
 ```{r}
-cm_xgboost
-lda_balanced_predict$class
-roc_score=roc(test,pred_class) #AUC score
-plot(roc_score ,main ="ROC curve -- Logistic Regression ")
+# performance of models on Imbalanced
+Imbalance_Models
 
-acc_xgboost_balanced
-cm_xgboost_balanced[["byClass"]][1]
-acc_xgboost
-cm_xgboost[["byClass"]][1]
 
-print("lr")
-cm_lr_balanced[["byClass"]][1]
-acc_lr_balanced
-cm_lr[["byClass"]][1]
-acc_lr
-
-print("lda")
-cm_lda_balanced[["byClass"]][1]
-acc_lda_balanced
-cm_lda[["byClass"]][1]
-acc_lda
-
-print("nb")
-cm_nb_balanced[["byClass"]][1]
-acc_nb_balanced
-cm_nb[["byClass"]][1]
-acc_nb
-
-print("svm")
-cm_svm_balanced[["byClass"]][1]
-acc_svm_balanced
-cm_svm[["byClass"]][1]
-acc_svm
-
-print("bagging")
-cm_bagging_balanced[["byClass"]][1]
-acc_bagging_balanced
-cm_bagging[["byClass"]][1]
-acc_bagging
-
-print("boost")
-cm_boost_balanced[["byClass"]][7]
-acc_boost_balanced
-cm_boost[["byClass"]][7]
-acc_boost
-
-print("rf")
-cm_rf_smote[["byClass"]][7]
-acc_rf_smote
-cm_rf_balanced[["byClass"]][7]
-acc_rf_balanced
-cm_rf[["byClass"]][7]
-acc_rf
-cm_xgboost_balanced[["byClass"]]
+# performance of models on balanced
+Balance_Models
 ```
