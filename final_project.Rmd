@@ -50,8 +50,13 @@ head(stroke_data)
 ```
 
 ### Dataset Description and EDA
+
+After describing the data we observed that there is a third category of gender and it has only one entry. In our analysis we are considering only Males and Females, hence we will remove this single entry.
 ```{r}
 str(stroke_data)
+
+# Remvoing gender entries apart from 'Male' and 'Female'
+stroke_data <- stroke_data[stroke_data$gender != 'Other',]
 ```
 ### Understanding the distribution of variables.
 
@@ -60,13 +65,23 @@ Categorical Variables
 ### 1. Gender
 
 ```{r}
+
 gender_counts <- as.data.frame(table(stroke_data$gender))
 
-gender_plot <- ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var1)) +
+ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var1)) +
         geom_bar(stat = "identity") + theme(legend.position="none") +
         geom_text(aes(label = Freq), vjust = 0) +
         labs(x ="Gender", y = "Frequency")
 
+
+gender_counts <- as.data.frame(table(stroke_data$gender, stroke_data$stroke))
+gender_counts$Var1 <- if_else(gender_counts$Var1 == "Female", 'Female','Male')
+gender_counts$Var2 <- if_else(gender_counts$Var2 == 0, 'No','Yes')
+
+gender_plot <- ggplot(gender_counts, aes(x = Var1, y = Freq, fill = Var2)) +
+        geom_bar(stat = "identity")  +
+        geom_text(aes(label = Freq), vjust = 0) +
+        labs(x ="Gender", y = "Frequency", fill = 'Stroke')
 gender_plot
 ```
 
@@ -136,11 +151,11 @@ married_plot <- ggplot(mstr_counts, aes(x = Var1, y = Freq, fill = Var2)) +
         geom_text(aes(label = Freq)) +
         labs(x ="Marriage", y = "Frequency", fill = 'Stroke')
 
+married_plot
+
 ```
 
 ### 5. Work Type
-
-
 ```{r}
 
 wt_counts <- as.data.frame(table(stroke_data$work_type))
@@ -211,8 +226,6 @@ smoke_plot
 ### 8. Age
 ```{r}
 #reference: https://www.r-bloggers.com/2021/11/how-to-make-stunning-histograms-in-r-a-complete-guide-with-ggplot2/
-
-
 age_plot <- ggplot(stroke_data, aes(x=age)) + 
   geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
@@ -224,9 +237,9 @@ age_plot
 glucose_plot <- ggplot(stroke_data, aes(x=avg_glucose_level)) + 
   geom_histogram(aes(y = ..density..),color = "#000000", fill = "#0099F8") +
   geom_density(color = "#000000", fill = "#F85700", alpha = 0.6)
+
+glucose_plot
 ```
-
-
 
 ### 10. BMI
 ```{r}
@@ -250,20 +263,18 @@ stroke_plot <- ggplot(s_counts, aes(x = Var1, y = Freq, fill = Var1)) +
         labs(x ="Stroke", y = "Frequency")
 stroke_plot
 ```
-As we can see from the above graph, Our dependant variable stroke is highly imbalanced, Which is true in a realistic scenario as for a sample population, Number of people suffering from stroke is less.
+As we can see from the above graph, Our dependent variable stroke is highly imbalanced, Which is true in a realistic scenario as for a sample population, Number of people suffering from stroke is less.
 
-
+Here, we have consolidated distributions of all categorical variables with respect to whether the patient has stroke or not
 ```{r}
 require(gridExtra)
 grid.arrange(gender_plot,hypo_plot,heart_plot,married_plot, nrow = 2, ncol=2)
 ```
 ```{r}
-
 grid.arrange(work_plot,residence_plot,smoke_plot,stroke_plot, nrow = 2, ncol=2)
 ```
 
 Factorizing all the categorical variables
-
 ```{r}
 # reference for one hot coding - https://datatricks.co.uk/one-hot-encoding-in-r-three-simple-methods
 
@@ -290,6 +301,7 @@ colMeans(is.na(stroke_data))*100
 ```
 
 ### Analysis for imputation of missing values
+Since there very few missing values and patient data is very sensitive to loose we will go ahead imputing the missing values with a selected paramter.
 ```{r}
 mean_bmi <- mean(na.omit(stroke_data$bmi))
 median_bmi <- median(na.omit(stroke_data$bmi))
@@ -328,6 +340,7 @@ polygon(d, col="yellow", border="blue")
 ```
 
 ### Imputation of missing values with mean of the values from the column 'bmi'
+Since the distribution is uniform and the mean, median and mode values are almost the same, we will go ahead with mean imputation for the missing values in the 'bmi' variable column
 ```{r}
 stroke_data$bmi[is.na(stroke_data$bmi)] <- mean(stroke_data$bmi, na.rm = TRUE)
 stroke_data <- na.omit(stroke_data)
@@ -347,6 +360,7 @@ boxplot(stroke_data$avg_glucose_level, main="Avg glucose level distribution",
 ```
 
 ### Outlier removal based on IQR
+All the values beyond 1.5 times the Inter-quartile range (IQR) will be considered as outliers and removed.
 ```{r}
 #IQR
 
@@ -461,6 +475,9 @@ acc_rf_balanced = mean(yhat_rf_balanced == test_data$stroke)
 # classification metrics
 cm_rf_balanced <- confusionMatrix(yhat_rf_balanced, test_data$stroke, mode = "everything", positive="1")
 cm_rf_balanced
+
+# Variable importance plot
+varImpPlot(rf_balanced)
 ```
 However, the oversampling using "ovun.sample" has not improved the model performance. The model is still predicting all observations as majority class. So, we will switch to another method for oversampling. We will make use of Synthetic Minority Oversampling Technique (SMOTE) for balancing the data.
 
@@ -518,6 +535,9 @@ acc_rf_smote = mean(yhat_rf_smote == test_data$stroke)
 # confusion matrix
 cm_rf_smote <- confusionMatrix(yhat_rf_smote, as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_rf_smote
+
+# Variable importance plot
+varImpPlot(rf_smote)
 ```
 ### Applying other supervised machine learning models to balanced and imbalanced data.
 
@@ -599,6 +619,7 @@ acc_boost_balanced = mean(yhat_boost_balanced == test_data$stroke)
 # confusion matrix
 cm_boost_balanced <- confusionMatrix(as.factor(yhat_boost_balanced), as.factor(test_data$stroke), mode = "everything", positive="1")
 cm_boost_balanced
+
 ```
 ### 3. 
 ### SVM on Unbalanced Dataset
@@ -900,16 +921,18 @@ Balance_Models <- model_performance %>%
 colnames(Balance_Models) <- c('XGBoost','Logistic Regression',"LDA","Naive Bayes","SVM","Bagging","Boosting","Random Forest")
 rownames(Balance_Models) <- c('Sensitivity','F1-Score','Balanced Accuracy','Accuracy')
 
-Imbalance_Models
-
-Balance_Models
 ```
 Now we have consolidated the performance metrics in tabular format
 ```{r}
 # performance of models on Imbalanced
+print("Model performance on the imbalanced data")
 Imbalance_Models
+```
 
-
+```{r}
 # performance of models on balanced
+print("Model performance on the balanced data")
 Balance_Models
 ```
+
+After looking at the performance of all the models we inferred that sensitivity of XGBoost, Logistic Regression, SVM and LDA was good enough to be considered for stroke prediction.
