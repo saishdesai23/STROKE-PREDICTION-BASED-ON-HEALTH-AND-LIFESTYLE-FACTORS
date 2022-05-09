@@ -4,8 +4,9 @@ Implementation of a classifier to predict the chances of stroke for a patient
 
 Research questions
 
-**Prediction of Risk of Stroke**
+1) Given the information of a person from the list of predictors, can we predict if the person is likely to get a stroke?
 
-**Which lifestyle factors contribute the most towards stroke?**
+3) Which factors are important in influencing whether a person is likely to get a stroke or not?
 
-**How do we tackle the problem of an imbalanced dataset?**
+5) How do we tackle the problem of an imbalanced dataset with positive class (stroke) as a minority?
+
